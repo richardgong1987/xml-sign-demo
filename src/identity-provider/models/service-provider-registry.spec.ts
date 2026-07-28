@@ -1,10 +1,10 @@
 import {Test} from "@nestjs/testing";
 
 import {
+    createIdentityProviderConfig,
     DEFAULT_IDENTITY_PROVIDER_PORT,
     DEFAULT_SERVICE_PROVIDER_BASE_URLS,
     IDENTITY_PROVIDER_CONFIG,
-    createIdentityProviderConfig,
 } from "../identity-provider.config";
 import {ServiceProviderRegistry, UnregisteredServiceProviderError} from "./service-provider-registry";
 

@@ -1,7 +1,7 @@
 import {DOMParser} from "@xmldom/xmldom";
 import xpath from "xpath";
 
-import {UnsignedSamlResponseSpec, createUnsignedSamlResponse} from "./saml-response.factory";
+import {createUnsignedSamlResponse, UnsignedSamlResponseSpec} from "./saml-response.factory";
 
 const ISSUED_AT = new Date("2026-07-28T09:00:00.000Z");
 

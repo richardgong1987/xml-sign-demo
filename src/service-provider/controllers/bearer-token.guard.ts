@@ -1,10 +1,4 @@
-import {
-    CanActivate,
-    ExecutionContext,
-    Injectable,
-    UnauthorizedException,
-    createParamDecorator,
-} from "@nestjs/common";
+import {CanActivate, createParamDecorator, ExecutionContext, Injectable, UnauthorizedException,} from "@nestjs/common";
 import {Request} from "express";
 
 import {AuthenticatedUser} from "../models/authenticated-user";

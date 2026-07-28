@@ -1,7 +1,7 @@
 import {JwtModule} from "@nestjs/jwt";
 import {Test} from "@nestjs/testing";
 
-import {SERVICE_PROVIDER_CONFIG, createServiceProviderConfig} from "../service-provider.config";
+import {createServiceProviderConfig, SERVICE_PROVIDER_CONFIG} from "../service-provider.config";
 import {AuthenticatedUser} from "../models/authenticated-user";
 import {AccessTokenIssuer} from "./access-token";
 import {JwtAccessTokenIssuer} from "./jwt-access-token.issuer";

@@ -3,10 +3,10 @@ import {parseArgs, styleText} from "node:util";
 
 import {createWebApplication} from "../shared/create-web-application";
 import {
+    createServiceProviderConfig,
     DEFAULT_IDENTITY_PROVIDER_BASE_URL,
     DEFAULT_SERVICE_PROVIDER_PORT,
     ServiceProviderConfig,
-    createServiceProviderConfig,
 } from "./service-provider.config";
 import {ServiceProviderModule} from "./service-provider.module";
 import {createDemoAccessTokenSecret} from "./services/demo-access-token-secret";

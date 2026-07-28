@@ -44,7 +44,8 @@ export class ServiceProviderController {
     @Get("login")
     @Redirect()
     async startLogin(@Query("returnTo") returnTo = ""): Promise<{ url: string }> {
-        return {url: await this.startSingleSignOn.execute({returnTo})};
+        const url = await this.startSingleSignOn.execute({returnTo});
+        return {url};
     }
 
     @Get("api/saml/metadata")

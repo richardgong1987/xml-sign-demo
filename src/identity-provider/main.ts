@@ -3,10 +3,10 @@ import {parseArgs, styleText} from "node:util";
 
 import {createWebApplication} from "../shared/create-web-application";
 import {
+    createIdentityProviderConfig,
     DEFAULT_IDENTITY_PROVIDER_PORT,
     DEFAULT_SERVICE_PROVIDER_BASE_URLS,
     IdentityProviderConfig,
-    createIdentityProviderConfig,
 } from "./identity-provider.config";
 import {IdentityProviderModule} from "./identity-provider.module";
 import {createDemoSigningCredential} from "./services/signing-credential";
