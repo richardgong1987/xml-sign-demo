@@ -1,4 +1,5 @@
-import {AccessTokenIssuer} from "./access-token";
+import {ServiceProviderConfig} from "../config/service-provider.config";
+import {JwtUtil} from "./jwt-util";
 import {SamlGateway} from "./saml-gateway";
 
 const DEFAULT_LANDING_PAGE = "/profile";
@@ -14,7 +15,7 @@ export interface CompletedSingleSignOn {
 }
 
 /**
- * The SP validates the SAMLResponse the IdP issued and mints an access token for the
+ * The SP validates the SAMLResponse the IdP issued and signs an access token for the
  * user it describes.
  *
  * This is where trust is converted: the SAML assertion becomes the SP's own token, and
@@ -23,7 +24,7 @@ export interface CompletedSingleSignOn {
 export class CompleteSingleSignOnUseCase {
     constructor(
         private readonly samlGateway: SamlGateway,
-        private readonly accessTokens: AccessTokenIssuer,
+        private readonly config: ServiceProviderConfig,
     ) {
     }
 
@@ -31,7 +32,7 @@ export class CompleteSingleSignOnUseCase {
         const authenticatedUser = await this.samlGateway.validateSamlResponse(command.samlResponse);
 
         return {
-            accessToken: await this.accessTokens.issue(authenticatedUser),
+            accessToken: await JwtUtil.sign(this.config, authenticatedUser),
             returnTo: toSafeLandingPage(command.relayState),
         };
     }

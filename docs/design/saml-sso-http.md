@@ -106,7 +106,7 @@ apps/identity-provider/ (NestJS)     apps/service-provider/ (Next.js)
 │   saml-response.factory            │   start-single-sign-on (UC)
 │   idp-metadata.factory             │   complete-single-sign-on (UC)
 ├── src/services/                    │   node-saml.gateway
-│   issue-saml-response (UC)         │   jose-access-token.issuer
+│   issue-saml-response (UC)         │   jwt-util
 │   xml-crypto-assertion-signer      │   idp-metadata.client
 │   authn-request.parser             ├── src/presenters/
 │   signing-credential               ├── src/token-handoff.page.ts
@@ -137,7 +137,7 @@ only the outermost layer:
 | Ports | abstract classes (need a runtime token) | plain interfaces |
 | Routing | `@Controller` + `@Get` | `app/**/route.ts` |
 | Views | EJS + presenters | React server and client components |
-| JWT | `@nestjs/jwt` | `jose` |
+| JWT | injected `@nestjs/jwt` service | static `JwtUtil` over `jose` |
 | Configuration | `parseArgs` flags | environment variables |
 | Auth check | `CanActivate` guard | a function each handler calls |
 | Trust import | async provider, resolved at boot | memoised promise, resolved on first use |
@@ -162,7 +162,7 @@ runtime factory.
 ```text
 controller -> use case -> model
 controller -> presenter
-use case   -> port (AssertionSigner / Clock / SamlGateway / AccessTokenIssuer)
+use case   -> port (AssertionSigner / Clock / SamlGateway)
 adapter    -> port implementation
 ```
 
@@ -203,9 +203,10 @@ subject is constructed directly — the same test, one indirection lighter.
 - `authenticated-user`: refuses creation without a NameID, immutable afterwards.
 - `IssueSamlResponseUseCase`: with a fake `AssertionSigner` and a fixed `Clock`, asserts
   the delivery address comes from the registry and invalid input never reaches signing.
-- `CompleteSingleSignOnUseCase`: with a fake `SamlGateway` and `AccessTokenIssuer`,
-  asserts the RelayState off-site fallback and that a failed validation mints no token.
-- `createJoseAccessTokenIssuer`: round-trips the identity, and refuses a token signed
+- `CompleteSingleSignOnUseCase`: with a fake `SamlGateway` and a real `JwtUtil`,
+  asserts the RelayState off-site fallback, that a failed validation signs no token, and
+  that the token it does produce verifies back to the asserted user.
+- `JwtUtil`: round-trips the identity, and refuses a token signed
   with a different secret, edited after signing, or past its expiry.
 
 End to end (`e2e/`) is the only package that runs both applications. Its `globalSetup`
@@ -232,6 +233,11 @@ Two things it does not cover:
 - The IdP carries AuthnRequest context between `/idp/sso` and `/idp/login` in hidden
   form fields. Production should keep it in the IdP's own session so the user cannot
   rewrite it.
+- `JwtUtil` names a mechanism where the rest of the codebase names roles, and the use
+  case calls it statically rather than through a port. Both are deliberate: the name
+  matches the team convention this code lives alongside, and HMAC is cheap enough that
+  no test needs to fake it. The cost is that swapping to opaque tokens plus a store
+  would touch the use case, not just a binding.
 - Keeping the token in localStorage means any XSS on the SP can read it, and nothing can
   revoke it before `exp` — signing out only clears the browser's copy. An end-to-end
   test asserts that a captured token still works after sign-out, so the property stays

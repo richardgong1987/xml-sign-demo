@@ -1,8 +1,6 @@
 import {ServiceProviderConfig, readServiceProviderConfig} from "./config/service-provider.config";
-import {AccessTokenIssuer} from "./services/access-token";
 import {CompleteSingleSignOnUseCase} from "./services/complete-single-sign-on.use-case";
 import {fetchIdentityProviderTrust} from "./services/idp-metadata.client";
-import {createJoseAccessTokenIssuer} from "./services/jose-access-token.issuer";
 import {createNodeSamlGateway} from "./services/node-saml.gateway";
 import {StartSingleSignOnUseCase} from "./services/start-single-sign-on.use-case";
 
@@ -10,13 +8,15 @@ export interface ServiceProviderRuntime {
     readonly config: ServiceProviderConfig;
     readonly startSingleSignOn: StartSingleSignOnUseCase;
     readonly completeSingleSignOn: CompleteSingleSignOnUseCase;
-    readonly accessTokens: AccessTokenIssuer;
     readonly samlMetadataXml: string;
 }
 
 /*
- * The composition root. Nest had a DI container do this; here it is one function, and
- * the ports are still the only thing the use cases ever see.
+ * The composition root. Nest had a DI container do this; here it is one function.
+ *
+ * SamlGateway stays a port because node-saml is heavy to stand up in a test. JWT
+ * signing does not: JwtUtil is called statically with config, so there is nothing to
+ * inject and nothing to fake.
  *
  * Memoised rather than built at startup because Next gives no reliable "the server is
  * booting" hook — a route handler may be the first thing that runs. The promise is
@@ -39,13 +39,11 @@ async function createServiceProvider(): Promise<ServiceProviderRuntime> {
     const identityProvider = await fetchIdentityProviderTrust(config.identityProviderMetadataUrl);
 
     const samlGateway = createNodeSamlGateway(config, identityProvider);
-    const accessTokens = createJoseAccessTokenIssuer(config);
 
     return {
         config,
         startSingleSignOn: new StartSingleSignOnUseCase(samlGateway),
-        completeSingleSignOn: new CompleteSingleSignOnUseCase(samlGateway, accessTokens),
-        accessTokens,
+        completeSingleSignOn: new CompleteSingleSignOnUseCase(samlGateway, config),
         samlMetadataXml: samlGateway.describeMetadata(),
     };
 }

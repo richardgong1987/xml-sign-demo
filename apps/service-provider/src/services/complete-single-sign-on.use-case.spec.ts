@@ -1,6 +1,7 @@
+import {ServiceProviderConfig, readServiceProviderConfig} from "../config/service-provider.config";
 import {AuthenticatedUser} from "../domain/authenticated-user";
-import {AccessTokenIssuer} from "./access-token";
 import {CompleteSingleSignOnUseCase} from "./complete-single-sign-on.use-case";
+import {JwtUtil} from "./jwt-util";
 import {SamlGateway} from "./saml-gateway";
 
 const AUTHENTICATED_USER: AuthenticatedUser = {
@@ -11,9 +12,14 @@ const AUTHENTICATED_USER: AuthenticatedUser = {
     sessionIndex: "_session-1",
 };
 
+const config: ServiceProviderConfig = readServiceProviderConfig({
+    SP_ACCESS_TOKEN_SECRET: "use-case-secret-use-case-secret",
+});
+
 /*
  * A fake gateway that can be told to accept or reject, so "what happens on an invalid
- * signature" needs no forged XML signature.
+ * signature" needs no forged XML signature. The JWT is left real — HMAC is cheap, and a
+ * token the test can verify is a stronger assertion than a stub string.
  */
 function createStubSamlGateway(rejectionReason?: string): SamlGateway {
     return {
@@ -33,49 +39,19 @@ function createStubSamlGateway(rejectionReason?: string): SamlGateway {
     };
 }
 
-/*
- * A fake issuer: it records who it was asked to mint a token for and signs nothing, so
- * the use case can be tested without any key material.
- */
-function createRecordingAccessTokenIssuer() {
-    const issuedFor: AuthenticatedUser[] = [];
-
-    const accessTokens: AccessTokenIssuer = {
-        async issue(user) {
-            issuedFor.push(user);
-            return `token-${issuedFor.length}`;
-        },
-        verify(): Promise<AuthenticatedUser> {
-            throw new Error("not used in this test");
-        },
-    };
-
-    return {accessTokens, issuedFor};
-}
-
-function createUseCase(rejectionReason?: string) {
-    const {accessTokens, issuedFor} = createRecordingAccessTokenIssuer();
-
-    return {
-        useCase: new CompleteSingleSignOnUseCase(createStubSamlGateway(rejectionReason), accessTokens),
-        issuedFor,
-    };
+function createUseCase(rejectionReason?: string): CompleteSingleSignOnUseCase {
+    return new CompleteSingleSignOnUseCase(createStubSamlGateway(rejectionReason), config);
 }
 
 describe("CompleteSingleSignOnUseCase", () => {
-    it("mints an access token for the asserted user once validation succeeds", async () => {
-        const {useCase, issuedFor} = createUseCase();
+    it("signs an access token the SP can verify back to the asserted user", async () => {
+        const result = await createUseCase().execute({samlResponse: "base64", relayState: "/profile"});
 
-        const result = await useCase.execute({samlResponse: "base64", relayState: "/profile"});
-
-        expect(issuedFor).toEqual([AUTHENTICATED_USER]);
-        expect(result.accessToken).toBe("token-1");
+        expect(await JwtUtil.verify(config, result.accessToken)).toEqual(AUTHENTICATED_USER);
     });
 
     it("sends the browser back to RelayState when it is a local path", async () => {
-        const {useCase} = createUseCase();
-
-        const result = await useCase.execute({samlResponse: "base64", relayState: "/orders/42"});
+        const result = await createUseCase().execute({samlResponse: "base64", relayState: "/orders/42"});
 
         expect(result.returnTo).toBe("/orders/42");
     });
@@ -83,20 +59,15 @@ describe("CompleteSingleSignOnUseCase", () => {
     it.each(["", "https://attacker.example.test", "//attacker.example.test"])(
         "falls back to the default landing page for RelayState %p",
         async (relayState) => {
-            const {useCase} = createUseCase();
-
-            const result = await useCase.execute({samlResponse: "base64", relayState});
+            const result = await createUseCase().execute({samlResponse: "base64", relayState});
 
             expect(result.returnTo).toBe("/profile");
         },
     );
 
-    it("mints no token when validation fails", async () => {
-        const {useCase, issuedFor} = createUseCase("Invalid signature");
-
+    it("signs no token when validation fails", async () => {
         await expect(
-            useCase.execute({samlResponse: "tampered", relayState: "/profile"}),
+            createUseCase("Invalid signature").execute({samlResponse: "tampered", relayState: "/profile"}),
         ).rejects.toThrow(/Invalid signature/);
-        expect(issuedFor).toHaveLength(0);
     });
 });

@@ -73,7 +73,8 @@ src/service-provider.runtime.ts the composition root — one memoised factory
 src/token-handoff.page.ts       the document that moves the JWT into localStorage
 ```
 
-- **Ports are plain interfaces here.** Without a DI container nothing needs the type at runtime, so `SamlGateway` and `AccessTokenIssuer` are interfaces and fakes are object literals.
+- **`SamlGateway` is the only port on this side**, and it is a plain interface — without a DI container nothing needs the type at runtime, so a fake is an object literal. It earns the indirection because standing up node-saml in a unit test is expensive.
+- **`JwtUtil` is a class of static methods**, named for the team convention this code lives alongside. `sign(config, user)` and `verify(config, token)` take config explicitly rather than reading the environment, which is what lets a spec sign with one secret and verify with another. No interface and no factory: HMAC is cheap enough that tests use the real thing.
 - `src/` contains no Next imports and `app/` contains no business logic. That separation is what let this half move over from NestJS almost unchanged; keep it.
 - Every route handler touching node-saml needs `export const runtime = "nodejs"` and `export const dynamic = "force-dynamic"`.
 - `next.config.ts` lists node-saml, xml-crypto, xmldom and xpath as `serverExternalPackages`, and pins `outputFileTracingRoot` to the workspace root.

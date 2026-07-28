@@ -1,5 +1,6 @@
+import {ServiceProviderConfig} from "./config/service-provider.config";
 import {AuthenticatedUser} from "./domain/authenticated-user";
-import {AccessTokenIssuer} from "./services/access-token";
+import {JwtUtil} from "./services/jwt-util";
 
 /**
  * The browser sends the token it kept in localStorage as `Authorization: Bearer <jwt>`.
@@ -10,7 +11,7 @@ import {AccessTokenIssuer} from "./services/access-token";
  */
 export async function readAuthenticatedUser(
     request: Request,
-    accessTokens: AccessTokenIssuer,
+    config: ServiceProviderConfig,
 ): Promise<AuthenticatedUser | null> {
     const token = readBearerToken(request.headers.get("authorization"));
 
@@ -19,7 +20,7 @@ export async function readAuthenticatedUser(
     }
 
     try {
-        return await accessTokens.verify(token);
+        return await JwtUtil.verify(config, token);
     } catch {
         // The reason (expired, wrong signature, malformed) is deliberately not reported
         // back: it would tell an attacker which part to fix.

@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
  * "signed in" — there is no session to look up.
  */
 export async function GET(request: Request): Promise<NextResponse> {
-    const {accessTokens} = await getServiceProvider();
-    const user = await readAuthenticatedUser(request, accessTokens);
+    const {config} = await getServiceProvider();
+    const user = await readAuthenticatedUser(request, config);
 
     if (!user) {
         return NextResponse.json({message: "Missing or invalid access token"}, {status: 401});
