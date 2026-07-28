@@ -58,36 +58,69 @@ provider it has been told about. `--idp-url` is where the SP goes to fetch trust
 | SP | `GET /profile` | shell page; its script verifies the token |
 | SP | `GET /api/me` | the SP's own API — requires `Authorization: Bearer <jwt>` |
 
-### The full flow
+## How the two sides cooperate
 
-```text
-Browser           SP (:3000)                      IdP (:4000)
-  |  GET /login       |                                |
-  |------------------>| builds the AuthnRequest        |
-  |<-- 302 -----------|                                |
-  |  GET /idp/sso?SAMLRequest=..&RelayState=..         |
-  |--------------------------------------------------->| parses the AuthnRequest
-  |<-------------------------- login page (pick a user)-|
-  |  POST /idp/login  |                                |
-  |--------------------------------------------------->| xml-crypto signs the assertion
-  |<-------------------------- self-submitting form ----|
-  |  POST /api/saml/acs                                |
-  |------------------>| node-saml -> xml-crypto verify |
-  |                   | checks Audience/Recipient/time |
-  |                   | signs its own JWT              |
-  |<-- hand-off page -| script: localStorage.setItem() |
-  |  GET /profile     |                                |
-  |------------------>| shell page only                |
-  |  GET /api/me  Authorization: Bearer <jwt>          |
-  |------------------>| verifies signature + expiry    |
-  |<-- 200 JSON ------|                                |
+### 1. Trust, established once at startup
+
+Before any user is involved, the SP has to learn who it should believe. That happens
+exactly once, over one HTTP call, and it is the only channel between the two:
+
+```mermaid
+graph LR
+    subgraph IDP["IdP · Demo OpenAM · :4000"]
+        KEY["RSA private key<br/>signs every Assertion<br/>never leaves this process"]
+        MD["GET /idp/metadata<br/>entity ID · SSO URL · certificate"]
+        KEY --> MD
+    end
+
+    subgraph SPX["SP · JSL-online · :3000"]
+        TRUST["idpCert<br/>node-saml verifies with this"]
+        SECRET["JWT secret<br/>never leaves this process"]
+    end
+
+    MD -->|"fetched while the SP boots"| TRUST
 ```
 
-### Sign-in state
+`ServiceProviderModule` declares that certificate as an **async provider**, so the SP
+application cannot finish initialising until the fetch succeeds. Start the SP with the
+IdP down and it exits instead of coming up half-configured. **The SP never touches the
+IdP private key, and the IdP never learns the SP's JWT secret.**
 
-The SP keeps nothing. After the assertion checks out it signs its own JWT (HS256, its
-own secret, 15 minutes) and renders a hand-off page — the IdP POSTed from *its* origin,
-so only a script on the SP origin can reach the SP's localStorage:
+### 2. Signing in
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Browser
+    participant SP as SP · JSL-online<br/>:3000
+    participant IDP as IdP · Demo OpenAM<br/>:4000
+
+    U->>SP: GET /profile
+    SP-->>U: shell page only, the server holds no session
+    Note over U: no token in localStorage
+
+    U->>SP: GET /login?returnTo=/profile
+    SP-->>U: 302 with SAMLRequest and RelayState
+
+    U->>IDP: GET /idp/sso?SAMLRequest=..&RelayState=/profile
+    IDP-->>U: login page, pick a demo user
+    U->>IDP: POST /idp/login
+    Note over IDP: ACS URL comes from the IdP registry, not the request<br/>xml-crypto signs the Assertion with the private key
+    IDP-->>U: self-submitting form aimed at the SP ACS
+
+    U->>SP: POST /api/saml/acs with SAMLResponse and RelayState
+    Note over SP: node-saml calls xml-crypto to verify the signature<br/>then checks Audience, Recipient, InResponseTo, validity<br/>only then signs its own JWT
+    SP-->>U: hand-off page carrying the JWT
+    Note over U: localStorage.setItem sp_access_token
+
+    U->>SP: GET /profile
+    SP-->>U: shell page
+    U->>SP: GET /api/me with Authorization Bearer jwt
+    SP-->>U: 200 with the profile
+```
+
+Step 12 needs a page rather than a redirect: the IdP POSTed from **its** origin, so only
+a script served by the SP can write to the SP's localStorage.
 
 ```html
 <div id="token-handoff" data-access-token="…" data-return-to="/profile"></div>
@@ -98,15 +131,51 @@ so only a script on the SP origin can reach the SP's localStorage:
 </script>
 ```
 
-From then on the page sends the token with every call. A valid signature and a live
-`exp` *is* the sign-in; anything else means not signed in, and the page starts SSO
-again. Signing out just deletes the key — there is nothing on the server to clear.
+### 3. Staying signed in
 
-How trust is established: `ServiceProviderModule` declares the IdP's certificate as an
-**async provider**, so the SP application does not finish initialising until it has
-fetched `GET /idp/metadata` and read the signing certificate out of it. That ordering
-is enforced by the DI container rather than by hand-written startup code. **The SP
-never touches the IdP private key.**
+The SP stores nothing. "Signed in" is not a row in a table — it is whether the token the
+browser presents still verifies:
+
+```mermaid
+flowchart TD
+    START["a page needs the user"] --> READ{"token in localStorage?"}
+    READ -->|no| SSO["location.replace /login?returnTo=..."]
+    READ -->|yes| CALL["GET /api/me<br/>Authorization Bearer jwt"]
+    CALL --> GUARD{"BearerTokenGuard:<br/>HS256 signature and exp both good?"}
+    GUARD -->|401| DROP["delete the token"]
+    DROP --> SSO
+    GUARD -->|200| RENDER["render the profile"]
+    SSO --> IDPFLOW["back through the SAML flow above"]
+```
+
+Over the whole lifetime of a sign-in that gives:
+
+```mermaid
+stateDiagram-v2
+    [*] --> SignedOut
+    SignedOut --> SigningIn: GET /login starts SAML SSO
+    SigningIn --> SignedIn: assertion verified, JWT stored
+    SignedIn --> SignedIn: every call re-verifies signature and exp
+    SignedIn --> SigningIn: 401, expired or tampered
+    SignedIn --> SignedOut: sign out deletes the token
+```
+
+### 4. Signing out
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Browser
+    participant SP as SP · JSL-online<br/>:3000
+
+    U->>U: localStorage.removeItem sp_access_token
+    U->>SP: GET /
+    SP-->>U: home page, not signed in
+    Note over U,SP: no request was needed to sign out<br/>a token copied beforehand keeps working until exp
+```
+
+That last note is the honest part of this design, and there is an end-to-end test
+asserting it so it cannot quietly stop being true.
 
 ### Tampering
 
