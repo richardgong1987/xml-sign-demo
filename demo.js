@@ -22,8 +22,6 @@ const {privateKey, publicKey} = crypto.generateKeyPairSync("rsa", {
     },
 });
 
-console.log(privateKey);
-console.log(publicKey);
 /*
  * 2. 使用私钥签名 XML
  */
