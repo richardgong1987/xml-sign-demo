@@ -72,7 +72,7 @@ export function readHiddenFields(html) {
 }
 
 export function readFormAction(html, formId) {
-    const match = html.match(new RegExp(`<form id="${formId}"[^>]*action="([^"]*)"`));
+    const match = html.match(new RegExp(`<form id="${RegExp.escape(formId)}"[^>]*action="([^"]*)"`));
 
     if (!match) {
         throw new Error(`页面里找不到 id="${formId}" 的表单`);

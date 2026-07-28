@@ -1,4 +1,4 @@
-import test from "node:test";
+import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 import { startSamlDemo } from "../../src/bootstrap.js";
@@ -18,13 +18,13 @@ let demo;
 let identityProviderBaseUrl;
 let serviceProviderBaseUrl;
 
-test.before(async () => {
+before(async () => {
     demo = await startSamlDemo(TEST_PORTS);
     identityProviderBaseUrl = `http://localhost:${demo.identityProviderConfig.port}`;
     serviceProviderBaseUrl = `http://localhost:${demo.serviceProviderConfig.port}`;
 });
 
-test.after(async () => {
+after(async () => {
     await demo.stop();
 });
 

@@ -5,6 +5,8 @@ import { toCertificatePem } from "../../shared/utils/x509-certificate.js";
 
 const REDIRECT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
 
+const METADATA_FETCH_TIMEOUT_MS = 5_000;
+
 /**
  * SP 启动时从 IdP metadata 导入信任配置。
  *
@@ -15,7 +17,14 @@ const REDIRECT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
  * @returns {Promise<{ entityId: string, singleSignOnUrl: string, signingCertificatePem: string }>}
  */
 export async function fetchIdentityProviderMetadata(metadataUrl) {
-    const response = await fetch(metadataUrl);
+    let response;
+
+    try {
+        // IdP 没起来时不要让 SP 一直挂着，否则启动失败的原因很难看出来。
+        response = await fetch(metadataUrl, { signal: AbortSignal.timeout(METADATA_FETCH_TIMEOUT_MS) });
+    } catch (error) {
+        throw new Error(`读取 IdP metadata 失败：无法访问 ${metadataUrl}`, { cause: error });
+    }
 
     if (!response.ok) {
         throw new Error(`读取 IdP metadata 失败：${metadataUrl} 返回 ${response.status}`);

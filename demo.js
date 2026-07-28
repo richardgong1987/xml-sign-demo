@@ -19,6 +19,7 @@
  */
 
 import crypto from "node:crypto";
+import { styleText } from "node:util";
 import { SAML } from "@node-saml/node-saml";
 import { DOMParser } from "@xmldom/xmldom";
 import { SignedXml } from "xml-crypto";
@@ -522,9 +523,11 @@ function createSamlId() {
 }
 
 function printTitle(title) {
-    console.log(`\n${"=".repeat(78)}`);
-    console.log(title);
-    console.log("=".repeat(78));
+    const rule = styleText("dim", "=".repeat(78));
+
+    console.log(`\n${rule}`);
+    console.log(styleText("bold", title));
+    console.log(rule);
 }
 
 function summarizeAssertion(samlResponse) {
@@ -575,8 +578,5 @@ function printAuthenticatedProfile(profile) {
     console.log("sessionIndex :", profile.sessionIndex);
 }
 
-main().catch((error) => {
-    console.error("\nDemo 执行失败：");
-    console.error(error);
-    process.exitCode = 1;
-});
+// ESM 顶层 await：失败时由 Node 直接报错并以非零码退出。
+await main();

@@ -3,8 +3,8 @@ import { DOMParser } from "@xmldom/xmldom";
 import xpath from "xpath";
 
 export class InvalidAuthnRequestError extends Error {
-    constructor(reason) {
-        super(`AuthnRequest 无法解析：${reason}`);
+    constructor(reason, options) {
+        super(`AuthnRequest 无法解析：${reason}`, options);
         this.name = "InvalidAuthnRequestError";
     }
 }
@@ -45,7 +45,8 @@ function inflateAuthnRequest(samlRequestParam) {
     try {
         return zlib.inflateRawSync(Buffer.from(samlRequestParam, "base64")).toString("utf8");
     } catch (error) {
-        throw new InvalidAuthnRequestError(`Base64 或 Deflate 解码失败（${error.message}）`);
+        // 用 cause 挂住底层错误，日志里能看到完整链路，而不是只剩一句拼接的文案。
+        throw new InvalidAuthnRequestError("Base64 或 Deflate 解码失败", { cause: error });
     }
 }
 
