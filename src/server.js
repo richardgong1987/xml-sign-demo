@@ -1,7 +1,5 @@
-"use strict";
-
-const { DEFAULT_PORTS } = require("./config");
-const { startSamlDemo } = require("./bootstrap");
+import { DEFAULT_PORTS } from "./config.js";
+import { startSamlDemo } from "./bootstrap.js";
 
 async function main() {
     const demo = await startSamlDemo(DEFAULT_PORTS);

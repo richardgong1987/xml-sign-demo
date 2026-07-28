@@ -1,19 +1,17 @@
-"use strict";
+import express from "express";
 
-const express = require("express");
-
-const { renderView } = require("../../shared/utils/render-view");
-const { listUsers } = require("../models/user-directory");
-const { parseRedirectBindingAuthnRequest } = require("../services/authn-request.parser");
-const { toLoginPageView, toAutoPostFormView } = require("../presenters/idp.presenter");
-const { tamperWithRole } = require("../services/tampering.simulator");
+import { renderView } from "../../shared/utils/render-view.js";
+import { listUsers } from "../models/user-directory.js";
+import { parseRedirectBindingAuthnRequest } from "../services/authn-request.parser.js";
+import { toLoginPageView, toAutoPostFormView } from "../presenters/idp.presenter.js";
+import { tamperWithRole } from "../services/tampering.simulator.js";
 
 /**
  * IdP 的 HTTP 边界。只做三件事：翻译输入、调用 use case、交给 presenter。
  *
  * @param {{ issueSamlResponse: { execute: Function }, metadataXml: string }} dependencies
  */
-function createIdentityProviderRouter({ issueSamlResponse, metadataXml }) {
+export function createIdentityProviderRouter({ issueSamlResponse, metadataXml }) {
     const router = express.Router();
 
     router.get("/idp/metadata", (request, response) => {
@@ -65,4 +63,3 @@ function isTamperRequested(formBody) {
     return formBody.tamper === "on";
 }
 
-module.exports = { createIdentityProviderRouter };

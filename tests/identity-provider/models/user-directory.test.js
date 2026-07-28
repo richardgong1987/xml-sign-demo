@@ -1,13 +1,11 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import {
     listUsers,
     findUser,
     UnknownUserError,
-} = require("../../src/models/user-directory");
+} from "../../../src/identity-provider/models/user-directory.js";
 
 test("列出所有可登录的演示用户", () => {
     const uids = listUsers().map((user) => user.uid);

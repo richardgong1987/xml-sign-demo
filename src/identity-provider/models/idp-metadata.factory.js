@@ -1,6 +1,4 @@
-"use strict";
-
-const { toCertificateBody } = require("../../shared/utils/x509-certificate");
+import { toCertificateBody } from "../../shared/utils/x509-certificate.js";
 
 /**
  * IdP 对外公布的 metadata。
@@ -11,7 +9,7 @@ const { toCertificateBody } = require("../../shared/utils/x509-certificate");
  * @param {{ entityId: string, singleSignOnUrl: string, certificatePem: string }} params
  * @returns {string}
  */
-function createIdentityProviderMetadata({ entityId, singleSignOnUrl, certificatePem }) {
+export function createIdentityProviderMetadata({ entityId, singleSignOnUrl, certificatePem }) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor
     xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
@@ -40,4 +38,3 @@ function createIdentityProviderMetadata({ entityId, singleSignOnUrl, certificate
 </md:EntityDescriptor>`;
 }
 
-module.exports = { createIdentityProviderMetadata };

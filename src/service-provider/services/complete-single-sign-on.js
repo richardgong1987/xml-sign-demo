@@ -1,7 +1,5 @@
-"use strict";
-
 /**
- * @typedef {import("./start-single-sign-on").SamlGatewayPort} SamlGatewayPort
+ * @typedef {import("./start-single-sign-on.js").SamlGatewayPort} SamlGatewayPort
  * @typedef {{ create: (user: object) => string, find: (sessionId: string) => object | null }} SessionStorePort
  */
 
@@ -13,7 +11,7 @@ const DEFAULT_LANDING_PAGE = "/profile";
  * 这是整个流程的信任转换点：SAML 断言在这里换成 SP 自己的会话，
  * 之后的业务请求不再关心 SAML。
  */
-class CompleteSingleSignOnUseCase {
+export class CompleteSingleSignOnUseCase {
     #samlGateway;
     #sessionStore;
 
@@ -47,4 +45,3 @@ function toSafeLandingPage(relayState) {
     return isLocalPath ? relayState : DEFAULT_LANDING_PAGE;
 }
 
-module.exports = { CompleteSingleSignOnUseCase };

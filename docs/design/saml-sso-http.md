@@ -77,47 +77,54 @@ SSO 地址和签名证书，作为 `node-saml` 的 `idpCert`。SP 全程不接�
 
 ## 7. Architecture Boundary
 
-目录按技术层划分，一份文件放哪里，取决于它「因为什么原因才需要改」。
+第一层边界是「两个独立项目」，第二层才是技术分层。
+IdP 与 SP 各自成目录，只通过 HTTP 打交道，不 import 对方的任何文件。
 
 ```text
-models/       业务规则
-              user-directory / service-provider-registry
-              saml-response.factory / idp-metadata.factory / authenticated-user
+src/identity-provider/          src/service-provider/
+├── models/                     ├── models/
+│   user-directory              │   authenticated-user
+│   service-provider-registry   │
+│   saml-response.factory       │
+│   idp-metadata.factory        │
+├── services/                   ├── services/
+│   issue-saml-response（用例）  │   start-single-sign-on（用例）
+│   xml-crypto-assertion-signer │   complete-single-sign-on（用例）
+│   authn-request.parser        │   node-saml.gateway
+│   tampering.simulator         │   in-memory-session-store
+│                               │   idp-metadata.client
+├── controllers/                ├── controllers/
+├── presenters/                 ├── presenters/
+├── views/                      ├── views/
+└── app.js（装配点）            └── app.js（装配点）
 
-services/     用例与外部依赖
-              用例：issue-saml-response / start-single-sign-on / complete-single-sign-on
-              外部：xml-crypto-assertion-signer / node-saml.gateway
-                    in-memory-session-store / idp-metadata.client
-                    authn-request.parser / tampering.simulator
-
-controllers/  HTTP 边界：idp.controller / sp.controller
-presenters/   决定用哪个模板、模板需要什么数据
-views/        EJS 模板与公共 layout
-utils/        时钟、SAML ID、X.509、模板引擎、错误处理
-bootstrap.js  组装根，唯一把用例的 port 换成具体实现的地方
+src/shared/utils/   时钟、SAML ID、X.509、模板引擎、错误处理
+src/shared/views/   公共 layout
+src/bootstrap.js    启动两个项目，并完成信任导入
 ```
 
-需要注意的取舍：这套目录按技术角色分组，因此 IdP 与 SP 的文件混在同一批目录里。
-判断一份文件属于哪一侧，靠的是文件名前缀（`idp.` / `sp.`）和文件头的注释，
-而不是目录本身。想读懂 SP 如何校验断言，需要在
-`controllers/sp.controller.js` → `services/complete-single-sign-on.js` →
-`services/node-saml.gateway.js` → `models/authenticated-user.js` 之间跳转。
+在项目内部，一份文件放哪一层取决于它「因为什么原因才需要改」：
+业务规则 → `models/`，流程或外部库 → `services/`，接口协议 → `controllers/`，
+页面展示 → `presenters/` 与 `views/`，换实现 → `app.js`。
 
 ### 视图
 
 HTML 不写在 JavaScript 里。职责切成三层：
 
 ```text
-presenters/    决定用哪个模板、模板需要哪些数据，返回 { view, model }
-views/         页面模板与公共 layout，转义由 EJS 的 <%= %> 负责
-public/        静态样式表，IdP 与 SP 各自挂到自己的根路径下
+<项目>/presenters/   决定用哪个模板、模板需要哪些数据，返回 { view, model }
+<项目>/views/        该项目的页面模板，转义由 EJS 的 <%= %> 负责
+shared/views/       公共 layout：_head.ejs 与 _foot.ejs
+shared/public/      静态样式表，两个项目各自挂到自己的根路径下
 ```
 
-controller 通过 `utils/render-view.js` 调用模板引擎，因此 controller 与 presenter
+controller 通过 `shared/utils/render-view.js` 调用模板引擎，因此 controller 与 presenter
 都不认识 EJS。换模板引擎时只需要改 `render-view.js`、`view-engine.js` 和模板本身。
 
-两个 app 共用同一个 `views/` 目录，`_head.ejs` 与页面模板同级，
-因此 `include("_head")` 按相对路径就能解析。
+`shared/utils/view-engine.js` 把每个 app 的模板目录设成
+`[项目自己的 views, shared/views]`：页面在本项目里找，`include("_head")` 回落到
+公共 layout。需要注意 Express 不会把 views 目录传给模板引擎，所以同一份目录列表
+还要写进 `app.locals.views`，EJS 解析 include 时才看得到。
 
 Port 用 JSDoc `@typedef` 声明在使用它的 use case 文件顶部。JavaScript 没有
 interface 关键字，为一个只有一两个方法的 port 单独建文件只会增加跳转成本。
@@ -142,12 +149,14 @@ adapter    → port 实现
 - `@node-saml/node-saml`：AuthnRequest 生成、SAMLResponse 协议校验、SP metadata。
 - `selfsigned`：Demo 启动时临时生成 IdP 的自签名 X.509 证书。
 - 会话存储：进程内 Map。
+- 运行时：Node.js ≥ 20.11，ES Module（`"type": "module"`），
+  路径解析用 `import.meta.dirname`。
 
 ## 10. Test Strategy
 
 `npm test` 一次跑完下面两层，共 38 个用例。
 
-`tests/models/` 与 `tests/services/`（27 个）不需要 HTTP、密钥或数据库：
+`tests/identity-provider/` 与 `tests/service-provider/`（27 个）不需要 HTTP、密钥或数据库：
 
 - `saml-response.factory`：固定 `issuedAt` 下的时间窗、Audience、Destination、
   `InResponseTo` 回填、属性映射。
@@ -166,7 +175,7 @@ adapter    → port 实现
 
 端到端测试跑在 14000/15000 端口，因此开着 `npm start` 也能执行。
 
-`services/authn-request.parser` 目前只被端到端流程间接覆盖，
+`identity-provider/services/authn-request.parser` 目前只被端到端流程间接覆盖，
 针对损坏 SAMLRequest 的单元测试尚未编写。
 
 ## 11. Risks and Trade-offs

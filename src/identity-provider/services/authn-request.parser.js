@@ -1,10 +1,8 @@
-"use strict";
+import zlib from "node:zlib";
+import { DOMParser } from "@xmldom/xmldom";
+import xpath from "xpath";
 
-const zlib = require("node:zlib");
-const { DOMParser } = require("@xmldom/xmldom");
-const xpath = require("xpath");
-
-class InvalidAuthnRequestError extends Error {
+export class InvalidAuthnRequestError extends Error {
     constructor(reason) {
         super(`AuthnRequest 无法解析：${reason}`);
         this.name = "InvalidAuthnRequestError";
@@ -22,7 +20,7 @@ class InvalidAuthnRequestError extends Error {
  * @param {string} samlRequestParam
  * @returns {{ requestId: string, serviceProviderEntityId: string }}
  */
-function parseRedirectBindingAuthnRequest(samlRequestParam) {
+export function parseRedirectBindingAuthnRequest(samlRequestParam) {
     const authnRequestXml = inflateAuthnRequest(samlRequestParam);
     const document = new DOMParser().parseFromString(authnRequestXml, "application/xml");
 
@@ -51,4 +49,3 @@ function inflateAuthnRequest(samlRequestParam) {
     }
 }
 
-module.exports = { parseRedirectBindingAuthnRequest, InvalidAuthnRequestError };

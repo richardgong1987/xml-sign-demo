@@ -1,10 +1,8 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const { startSamlDemo } = require("../../src/bootstrap");
-const { createBrowser, readHiddenFields, readFormAction } = require("./browser");
+import { startSamlDemo } from "../../src/bootstrap.js";
+import { createBrowser, readHiddenFields, readFormAction } from "./browser.js";
 
 /*
  * 用真实的 HTTP 走完整的 SP-initiated SSO 流程。

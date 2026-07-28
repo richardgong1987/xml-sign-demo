@@ -1,6 +1,4 @@
-"use strict";
-
-class UnregisteredServiceProviderError extends Error {
+export class UnregisteredServiceProviderError extends Error {
     constructor(entityId) {
         super(`IdP 未注册这个 SP：${entityId}`);
         this.name = "UnregisteredServiceProviderError";
@@ -14,7 +12,7 @@ class UnregisteredServiceProviderError extends Error {
  * 都由这份注册表决定。如果改成信任 AuthnRequest 里带来的 ACS 地址，
  * 攻击者就能让 IdP 把合法的 Assertion 投递到自己的服务器。
  */
-function createServiceProviderRegistry(serviceProviders) {
+export function createServiceProviderRegistry(serviceProviders) {
     const byEntityId = new Map(
         serviceProviders.map((serviceProvider) => [serviceProvider.entityId, serviceProvider]),
     );
@@ -32,4 +30,3 @@ function createServiceProviderRegistry(serviceProviders) {
     });
 }
 
-module.exports = { createServiceProviderRegistry, UnregisteredServiceProviderError };

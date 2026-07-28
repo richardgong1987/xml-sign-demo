@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * @typedef {{
  *   createLoginRedirectUrl: (relayState: string) => Promise<string>,
@@ -14,7 +12,7 @@
  * 用户登录后想回到的页面放在 RelayState 里。RelayState 对 IdP 是不透明的，
  * IdP 只负责原样带回来。
  */
-class StartSingleSignOnUseCase {
+export class StartSingleSignOnUseCase {
     #samlGateway;
 
     /** @param {{ samlGateway: SamlGatewayPort }} dependencies */
@@ -31,4 +29,3 @@ class StartSingleSignOnUseCase {
     }
 }
 
-module.exports = { StartSingleSignOnUseCase };

@@ -1,9 +1,7 @@
-"use strict";
+import { DOMParser } from "@xmldom/xmldom";
+import xpath from "xpath";
 
-const { DOMParser } = require("@xmldom/xmldom");
-const xpath = require("xpath");
-
-const { toCertificatePem } = require("../../shared/utils/x509-certificate");
+import { toCertificatePem } from "../../shared/utils/x509-certificate.js";
 
 const REDIRECT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
 
@@ -16,7 +14,7 @@ const REDIRECT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
  * @param {string} metadataUrl
  * @returns {Promise<{ entityId: string, singleSignOnUrl: string, signingCertificatePem: string }>}
  */
-async function fetchIdentityProviderMetadata(metadataUrl) {
+export async function fetchIdentityProviderMetadata(metadataUrl) {
     const response = await fetch(metadataUrl);
 
     if (!response.ok) {
@@ -47,4 +45,3 @@ function parseIdentityProviderMetadata(metadataXml) {
     });
 }
 
-module.exports = { fetchIdentityProviderMetadata };

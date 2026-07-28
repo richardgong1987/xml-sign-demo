@@ -1,6 +1,4 @@
-"use strict";
-
-const selfsigned = require("selfsigned");
+import selfsigned from "selfsigned";
 
 const CERTIFICATE_VALID_DAYS = 1;
 
@@ -13,7 +11,7 @@ const CERTIFICATE_VALID_DAYS = 1;
  *
  * @returns {Promise<{ privateKeyPem: string, certificatePem: string }>}
  */
-async function createDemoSigningCredential(commonName) {
+export async function createDemoSigningCredential(commonName) {
     const pems = await selfsigned.generate([{ name: "commonName", value: commonName }], {
         keySize: 2048,
         algorithm: "sha256",
@@ -30,4 +28,3 @@ function daysFromNow(days) {
     return new Date(Date.now() + days * 24 * 60 * 60_000);
 }
 
-module.exports = { createDemoSigningCredential };

@@ -10,8 +10,11 @@
 
 ## 运行环境
 
-- Node.js 18 或更高版本
+- Node.js 20.11 或更高版本
 - npm
+
+代码使用 ES Module（`package.json` 里 `"type": "module"`，所以 `.js` 即 ESM）。
+路径用 `import.meta.dirname`，这是要求 20.11 的原因。
 
 ## HTTP 版
 
@@ -110,23 +113,43 @@ NotOnOrAfter，最后返回用户 Profile。
 ## 目录结构
 
 ```text
-docs/design/saml-sso-http.md   设计文档：边界、依赖方向、测试策略
-src/config.js                  由端口推导出两端的 Entity ID、地址、有效期
-src/bootstrap.js               组装根：装配两个 app，先起 IdP 再让 SP 导入 metadata
-src/server.js                  命令行入口，打印启动信息
-src/models/                    业务规则：用户目录、SP 注册表、SAMLResponse 构造
-src/services/                  用例与外部依赖：签名、node-saml、会话、metadata 抓取
-src/controllers/               HTTP 边界：idp.controller、sp.controller
-src/presenters/                决定用哪个模板、模板需要什么数据
-src/views/                     EJS 模板，含公共 layout _head.ejs / _foot.ejs
-src/public/demo.css            两个服务共用的样式表
-src/utils/                     时钟、SAML ID、证书、模板引擎等通用工具
-tests/models/  tests/services/ 单元测试
-tests/e2e/                     端到端测试
-demo.js                        离线版
+IdP 与 SP 是两个互相独立的项目，各自再按技术分层。它们只通过 HTTP 打交道，
+不 import 对方的任何文件。
+
+```text
+docs/design/saml-sso-http.md  设计文档：边界、依赖方向、测试策略
+src/config.js                 由端口推导出两端的 Entity ID、地址、有效期
+src/bootstrap.js              组装根：先起 IdP，再让 SP 导入 metadata
+src/server.js                 命令行入口，打印启动信息
+
+src/identity-provider/        ← Demo OpenAM，独立项目
+├── models/                   用户目录、SP 注册表、SAMLResponse 与 metadata 构造
+├── services/                 签发用例、xml-crypto 签名、AuthnRequest 解析
+├── controllers/              idp.controller.js
+├── presenters/               idp.presenter.js
+├── views/                    login.ejs、auto-post.ejs
+└── app.js                    本项目的装配点
+
+src/service-provider/         ← JSL-online，独立项目
+├── models/                   authenticated-user.js
+├── services/                 SSO 发起与完成用例、node-saml、会话、metadata 抓取
+├── controllers/              sp.controller.js
+├── presenters/               sp.presenter.js
+├── views/                    home.ejs、profile.ejs
+└── app.js                    本项目的装配点
+
+src/shared/                   两边共用的通用部分
+├── utils/                    时钟、SAML ID、X.509、模板引擎、错误处理
+├── views/                    公共 layout：_head.ejs、_foot.ejs
+└── public/demo.css           样式表
+
+tests/identity-provider/      与 src 同构
+tests/service-provider/
+tests/e2e/                    端到端测试
+demo.js                       离线版
 ```
 
-一份文件属于哪一层，看它「因为什么原因才需要改」：
+在每个项目内部，一份文件属于哪一层，看它「因为什么原因才需要改」：
 
 | 目录 | 改动原因 |
 | --- | --- |
@@ -134,12 +157,12 @@ demo.js                        离线版
 | `services/` | 流程变了，或换了外部库、存储 |
 | `controllers/` | 接口协议变了 |
 | `presenters/` `views/` | 页面展示变了 |
-| `utils/` | 通用技术细节变了 |
+| `app.js` | 换实现（比如内存会话换成 Redis） |
 
-HTML 全部在 `src/views/*.ejs` 里，presenter 只负责挑模板和准备数据（`{ view, model }`），
-controller 通过 `utils/render-view.js` 渲染，因此业务代码里没有 HTML 字符串。
-每个页面以 `include("_head", { title })` 开头、`include("_foot")` 结尾，
-IdP 与 SP 共用同一份模板目录和样式表。
+HTML 全部在各项目的 `views/*.ejs` 里，presenter 只负责挑模板和准备数据
+（`{ view, model }`），controller 通过 `shared/utils/render-view.js` 渲染，
+因此业务代码里没有 HTML 字符串。每个页面以 `include("_head", { title })` 开头、
+`include("_foot")` 结尾，公共 layout 与样式表放在 `src/shared/`。
 
 ## 生产环境的差异
 

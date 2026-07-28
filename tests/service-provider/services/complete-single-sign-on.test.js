@@ -1,11 +1,9 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import {
     CompleteSingleSignOnUseCase,
-} = require("../../src/services/complete-single-sign-on");
+} from "../../../src/service-provider/services/complete-single-sign-on.js";
 
 const AUTHENTICATED_USER = Object.freeze({ nameId: "hanjin", role: "trader" });
 

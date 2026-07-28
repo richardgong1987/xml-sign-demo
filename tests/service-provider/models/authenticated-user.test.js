@@ -1,12 +1,10 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import {
     createAuthenticatedUser,
     InvalidAuthenticatedUserError,
-} = require("../../src/models/authenticated-user");
+} from "../../../src/service-provider/models/authenticated-user.js";
 
 const VALID_PROFILE = Object.freeze({
     nameId: "hanjin",

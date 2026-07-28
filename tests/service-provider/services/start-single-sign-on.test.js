@@ -1,11 +1,9 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import {
     StartSingleSignOnUseCase,
-} = require("../../src/services/start-single-sign-on");
+} from "../../../src/service-provider/services/start-single-sign-on.js";
 
 /*
  * 假的 SamlGatewayPort：记录 RelayState，不生成真正的 AuthnRequest。

@@ -1,13 +1,11 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
+import { DOMParser } from "@xmldom/xmldom";
+import xpath from "xpath";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { DOMParser } = require("@xmldom/xmldom");
-const xpath = require("xpath");
-
-const {
+import {
     createUnsignedSamlResponse,
-} = require("../../src/models/saml-response.factory");
+} from "../../../src/identity-provider/models/saml-response.factory.js";
 
 const ISSUED_AT = new Date("2026-07-28T09:00:00.000Z");
 

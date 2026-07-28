@@ -1,6 +1,4 @@
-"use strict";
-
-class InvalidAuthenticatedUserError extends Error {
+export class InvalidAuthenticatedUserError extends Error {
     constructor(reason) {
         super(`SAML 断言无法转换成登录用户：${reason}`);
         this.name = "InvalidAuthenticatedUserError";
@@ -15,7 +13,7 @@ class InvalidAuthenticatedUserError extends Error {
  *
  * @param {{ nameId: string, uid: string, email: string, role: string, sessionIndex: string }} params
  */
-function createAuthenticatedUser(params) {
+export function createAuthenticatedUser(params) {
     if (!params.nameId) {
         throw new InvalidAuthenticatedUserError("缺少 NameID");
     }
@@ -23,4 +21,3 @@ function createAuthenticatedUser(params) {
     return Object.freeze({ ...params });
 }
 
-module.exports = { createAuthenticatedUser, InvalidAuthenticatedUserError };

@@ -1,16 +1,14 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import {
     IssueSamlResponseUseCase,
-} = require("../../src/services/issue-saml-response");
-const {
+} from "../../../src/identity-provider/services/issue-saml-response.js";
+import {
     createServiceProviderRegistry,
     UnregisteredServiceProviderError,
-} = require("../../src/models/service-provider-registry");
-const { UnknownUserError } = require("../../src/models/user-directory");
+} from "../../../src/identity-provider/models/service-provider-registry.js";
+import { UnknownUserError } from "../../../src/identity-provider/models/user-directory.js";
 
 const IDENTITY_PROVIDER = Object.freeze({
     entityId: "https://openam.example.test/idp",

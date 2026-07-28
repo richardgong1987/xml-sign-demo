@@ -1,12 +1,10 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import {
     createServiceProviderRegistry,
     UnregisteredServiceProviderError,
-} = require("../../src/models/service-provider-registry");
+} from "../../../src/identity-provider/models/service-provider-registry.js";
 
 const JSL_ONLINE = Object.freeze({
     entityId: "https://jsl-online.example.test/metadata",

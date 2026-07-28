@@ -1,6 +1,4 @@
-"use strict";
-
-const { createSamlId } = require("../../shared/utils/saml-id");
+import { createSamlId } from "../../shared/utils/saml-id.js";
 
 /**
  * 构造一份尚未签名的 SAMLResponse。
@@ -19,7 +17,7 @@ const { createSamlId } = require("../../shared/utils/saml-id");
  * }} params
  * @returns {string}
  */
-function createUnsignedSamlResponse(params) {
+export function createUnsignedSamlResponse(params) {
     const { identityProviderEntityId, serviceProvider, user, authnRequestId, issuedAt } = params;
 
     const issueInstant = issuedAt.toISOString();
@@ -88,4 +86,3 @@ function renderAttribute(name, value) {
       </saml:Attribute>`;
 }
 
-module.exports = { createUnsignedSamlResponse };

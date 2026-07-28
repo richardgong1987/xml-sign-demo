@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * ClockPort 的生产实现。
  *
@@ -8,8 +6,7 @@
  *
  * @type {{ now: () => Date }}
  */
-const systemClock = Object.freeze({
+export const systemClock = Object.freeze({
     now: () => new Date(),
 });
 
-module.exports = { systemClock };

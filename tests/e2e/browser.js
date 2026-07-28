@@ -1,10 +1,8 @@
-"use strict";
-
 /**
  * 极简浏览器：保存 Cookie，但不自动跟随重定向，
  * 于是 SSO 过程中的每一次跳转都能被单独断言。
  */
-function createBrowser() {
+export function createBrowser() {
     const cookies = new Map();
 
     async function send(url, options) {
@@ -61,7 +59,7 @@ function splitCookiePair(setCookie) {
     return [pair.slice(0, separator).trim(), pair.slice(separator + 1).trim()];
 }
 
-function readHiddenFields(html) {
+export function readHiddenFields(html) {
     const fields = {};
 
     for (const [, name, value] of html.matchAll(
@@ -73,7 +71,7 @@ function readHiddenFields(html) {
     return fields;
 }
 
-function readFormAction(html, formId) {
+export function readFormAction(html, formId) {
     const match = html.match(new RegExp(`<form id="${formId}"[^>]*action="([^"]*)"`));
 
     if (!match) {
@@ -93,4 +91,3 @@ function decodeHtmlEntities(value) {
         .replace(/&amp;/g, "&");
 }
 
-module.exports = { createBrowser, readHiddenFields, readFormAction };

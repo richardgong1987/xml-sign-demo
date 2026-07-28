@@ -1,9 +1,7 @@
-"use strict";
-
 /*
  * 边界处的错误翻译：把内部错误变成 HTTP 响应，并且不把堆栈泄露给浏览器。
  */
-function createHttpErrorHandler(serviceName) {
+export function createHttpErrorHandler(serviceName) {
     return function handleHttpError(error, request, response, next) {
         if (response.headersSent) {
             next(error);
@@ -16,4 +14,3 @@ function createHttpErrorHandler(serviceName) {
     };
 }
 
-module.exports = { createHttpErrorHandler };

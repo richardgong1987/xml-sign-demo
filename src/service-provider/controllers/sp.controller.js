@@ -1,9 +1,7 @@
-"use strict";
+import express from "express";
 
-const express = require("express");
-
-const { renderView } = require("../../shared/utils/render-view");
-const { toHomePageView, toProfilePageView } = require("../presenters/sp.presenter");
+import { renderView } from "../../shared/utils/render-view.js";
+import { toHomePageView, toProfilePageView } from "../presenters/sp.presenter.js";
 
 const SESSION_COOKIE = "sp_session";
 
@@ -23,7 +21,7 @@ const SESSION_COOKIE_OPTIONS = Object.freeze({ httpOnly: true, sameSite: "lax", 
  *   metadataXml: string,
  * }} dependencies
  */
-function createServiceProviderRouter(dependencies) {
+export function createServiceProviderRouter(dependencies) {
     const { startSingleSignOn, completeSingleSignOn, sessionStore, metadataXml } = dependencies;
     const router = express.Router();
 
@@ -72,4 +70,3 @@ function createServiceProviderRouter(dependencies) {
     return router;
 }
 
-module.exports = { createServiceProviderRouter };

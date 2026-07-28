@@ -30,38 +30,49 @@ The design doc is `docs/design/saml-sso-http.md` — read it before changing bou
 
 ## Architecture (src/)
 
-Grouped by technical layer, dependencies pointing inward. **IdP and SP files share every directory** — which side a file belongs to is carried by its name prefix (`idp.` / `sp.`) and its header comment, not by its location. Keep that naming; it is the only boundary marker left.
+**Two independent projects first, technical layers second.** `src/identity-provider/` and `src/service-provider/` never import each other — they cooperate over HTTP only. That is the primary boundary; preserve it.
 
 ```
-src/config.js      createSamlConfigs(ports) derives every entity ID and URL from ports
-src/bootstrap.js   composition root — startSamlDemo(ports) + both app factories
-src/server.js      CLI entry point; prints the banner
-src/models/        business rules: user-directory, service-provider-registry,
-                   saml-response.factory, idp-metadata.factory, authenticated-user
-src/services/      use cases (issue-saml-response, start/complete-single-sign-on)
-                   + external adapters (xml-crypto signer, node-saml gateway,
-                   session store, metadata client, authn-request parser)
-src/controllers/   idp.controller / sp.controller — Express routers
-src/presenters/    view models: { view, model }
-src/views/         all EJS templates + _head.ejs / _foot.ejs
-src/public/        demo.css — served statically by both apps
-src/utils/         clock, SAML id, X.509 PEM, render-view, view-engine, error handler
+src/config.js               createSamlConfigs(ports) derives every entity ID and URL
+src/bootstrap.js            starts both projects, wires the trust import
+src/server.js               CLI entry point; prints the banner
+
+src/identity-provider/      Demo OpenAM
+  models/                   user-directory, service-provider-registry,
+                            saml-response.factory, idp-metadata.factory
+  services/                 issue-saml-response (use case), xml-crypto signer,
+                            authn-request.parser, tampering.simulator
+  controllers/ presenters/ views/
+  app.js                    this project's wiring point
+
+src/service-provider/       JSL-online
+  models/                   authenticated-user
+  services/                 start/complete-single-sign-on (use cases),
+                            node-saml.gateway, session store, idp-metadata.client
+  controllers/ presenters/ views/
+  app.js                    this project's wiring point
+
+src/shared/utils/           clock, SAML id, X.509 PEM, render-view, view-engine
+src/shared/views/           _head.ejs / _foot.ejs
+src/shared/public/          demo.css
 ```
 
-Where a file goes is decided by *what makes it change*: business rule → `models/`, workflow or external library → `services/`, wire protocol → `controllers/`, page output → `presenters/` + `views/`.
+Inside a project, where a file goes is decided by *what makes it change*: business rule → `models/`, workflow or external library → `services/`, wire protocol → `controllers/`, page output → `presenters/` + `views/`, swapping an implementation → `app.js`.
 
 Rules that hold across the codebase:
 
-- No HTML or CSS in JavaScript. Markup lives in `src/views/*.ejs`; presenters return `{ view, model }` and nothing else; controllers render through `utils/render-view.js`, so neither layer imports EJS. Escaping is EJS's `<%= %>` — don't hand-roll it. Every page opens with `include("_head", { title })` and closes with `include("_foot")`.
-- `models/` and the use-case files in `services/` import no `express`, no `xml-crypto`, no `@node-saml/node-saml`. Those libraries appear only in the adapter files under `services/` (`*.gateway.js`, `*-signer.js`, `*-store.js`, `*.client.js`, `*.parser.js`), in `controllers/`, and in `bootstrap.js`. Ports are declared as JSDoc `@typedef` at the top of the use case that needs them.
-- `bootstrap.js` is the only file that swaps a port for a concrete implementation.
+- ES Modules (`"type": "module"`), Node >= 20.11. Relative imports carry the `.js` extension; `import.meta.dirname` replaces `__dirname`.
+- No HTML or CSS in JavaScript. Markup lives in each project's `views/*.ejs`; presenters return `{ view, model }` and nothing else; controllers render through `shared/utils/render-view.js`, so neither layer imports EJS. Escaping is EJS's `<%= %>` — don't hand-roll it. Every page opens with `include("_head", { title })` and closes with `include("_foot")`.
+- `shared/utils/view-engine.js` sets each app's views to `[ownViews, sharedViews]`. It also mirrors that list into `app.locals.views` — Express does not forward its views setting to the template engine, and EJS resolves `include()` from `options.views`. Removing that line silently breaks every `include("_head")`.
+- `models/` and the use-case files in `services/` import no `express`, no `xml-crypto`, no `@node-saml/node-saml`. Those libraries appear only in the adapter files under `services/` (`*.gateway.js`, `*-signer.js`, `*.client.js`, `*.parser.js`), in `controllers/`, and in `app.js`. Ports are declared as JSDoc `@typedef` at the top of the use case that needs them.
+- Each project's `app.js` is the only file that swaps a port for a concrete implementation.
 - `startSamlDemo()` starts the IdP first, then the SP fetches `GET /idp/metadata` to import the IdP's signing certificate. That order is the trust-establishment order and is the point of the demo; don't collapse it into a shared module.
 - Ports are a parameter, not a constant: every entity ID and URL is derived from them in `createSamlConfigs()`. That is what lets the e2e suite run a second, isolated pair of servers.
 
 Two boundaries that carry security meaning, not just structure:
 
-- `models/service-provider-registry.js` (IdP) decides the ACS URL from the IdP's own registry, never from the AuthnRequest. Trusting the request's `AssertionConsumerServiceURL` would let an attacker redirect a valid assertion.
-- `toSafeLandingPage()` in `services/complete-single-sign-on.js` restricts RelayState to local paths.
+- `identity-provider/models/service-provider-registry.js` decides the ACS URL from the IdP's own registry, never from the AuthnRequest. Trusting the request's `AssertionConsumerServiceURL` would let an attacker redirect a valid assertion.
+- `toSafeLandingPage()` in `service-provider/services/complete-single-sign-on.js` restricts RelayState to local paths.
 
 `tampering.simulator.js` is demo-only, representing a man-in-the-middle between IdP and SP. It is deliberately not IdP business logic.
 
@@ -72,6 +83,6 @@ Two boundaries that carry security meaning, not just structure:
 ## Conventions
 
 - Comments, docs, and user-facing output are in Chinese. Match that.
-- CommonJS (`require`), Node >= 18.
+- ES Modules with explicit `.js` extensions on relative imports, Node >= 20.11.
 - XPath uses `local-name(.)` rather than namespace prefixes, since SAML documents vary in prefix choice.
 - Comments explain *why* — a business rule, a security consequence, or a production-vs-demo difference. This repo exists to be read, so those comments are the deliverable; redundant step-by-step narration is not.

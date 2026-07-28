@@ -1,5 +1,3 @@
-"use strict";
-
 /*
  * Presenter 只回答两件事：用哪个模板，模板需要哪些数据。
  * HTML 在 views/ 下的 EJS 模板里，转义由 EJS 的 <%= %> 负责。
@@ -13,11 +11,11 @@ const PROFILE_FIELDS = Object.freeze([
     { key: "sessionIndex", label: "SessionIndex" },
 ]);
 
-function toHomePageView() {
+export function toHomePageView() {
     return { view: "home", model: {} };
 }
 
-function toProfilePageView(authenticatedUser) {
+export function toProfilePageView(authenticatedUser) {
     return {
         view: "profile",
         model: {
@@ -29,4 +27,3 @@ function toProfilePageView(authenticatedUser) {
     };
 }
 
-module.exports = { toHomePageView, toProfilePageView };

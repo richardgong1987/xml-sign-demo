@@ -1,5 +1,3 @@
-"use strict";
-
 /*
  * 配置属于最外层。domain 和 use case 不读环境变量，也不认识端口号，
  * 只接收由组装根传进去的值。
@@ -8,12 +6,12 @@
  * 测试要在另一组端口上启动同一套服务，就必须能整组重算。
  */
 
-const DEFAULT_PORTS = Object.freeze({
+export const DEFAULT_PORTS = Object.freeze({
     identityProviderPort: 4000,
     serviceProviderPort: 5000,
 });
 
-function createSamlConfigs({ identityProviderPort, serviceProviderPort }) {
+export function createSamlConfigs({ identityProviderPort, serviceProviderPort }) {
     const identityProviderBaseUrl = `http://localhost:${identityProviderPort}`;
     const serviceProviderBaseUrl = `http://localhost:${serviceProviderPort}`;
 
@@ -51,4 +49,3 @@ function createSamlConfigs({ identityProviderPort, serviceProviderPort }) {
     return { identityProviderConfig, serviceProviderConfig };
 }
 
-module.exports = { createSamlConfigs, DEFAULT_PORTS };

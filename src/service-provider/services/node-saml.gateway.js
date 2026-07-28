@@ -1,8 +1,6 @@
-"use strict";
+import { SAML } from "@node-saml/node-saml";
 
-const { SAML } = require("@node-saml/node-saml");
-
-const { createAuthenticatedUser } = require("../models/authenticated-user");
+import { createAuthenticatedUser } from "../models/authenticated-user.js";
 
 /**
  * SamlGatewayPort 的实现，封装 @node-saml/node-saml。
@@ -15,7 +13,7 @@ const { createAuthenticatedUser } = require("../models/authenticated-user");
  *   identityProvider: { entityId: string, singleSignOnUrl: string, signingCertificatePem: string },
  * }} params
  */
-function createNodeSamlGateway({ serviceProvider, identityProvider }) {
+export function createNodeSamlGateway({ serviceProvider, identityProvider }) {
     const saml = new SAML({
         issuer: serviceProvider.entityId,
         callbackUrl: serviceProvider.assertionConsumerServiceUrl,
@@ -76,4 +74,3 @@ function toAuthenticatedUser(profile) {
     });
 }
 
-module.exports = { createNodeSamlGateway };

@@ -1,7 +1,5 @@
-"use strict";
-
-const { findUser } = require("../models/user-directory");
-const { createUnsignedSamlResponse } = require("../models/saml-response.factory");
+import { findUser } from "../models/user-directory.js";
+import { createUnsignedSamlResponse } from "../models/saml-response.factory.js";
 
 /**
  * @typedef {{ signAssertion: (samlResponseXml: string) => string }} AssertionSignerPort
@@ -17,7 +15,7 @@ const { createUnsignedSamlResponse } = require("../models/saml-response.factory"
 /**
  * 用户在 IdP 完成认证后，IdP 为指定的 SP 签发一份已签名的 SAMLResponse。
  */
-class IssueSamlResponseUseCase {
+export class IssueSamlResponseUseCase {
     #identityProvider;
     #serviceProviderRegistry;
     #assertionSigner;
@@ -63,4 +61,3 @@ class IssueSamlResponseUseCase {
     }
 }
 
-module.exports = { IssueSamlResponseUseCase };

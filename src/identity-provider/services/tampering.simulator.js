@@ -1,5 +1,3 @@
-"use strict";
-
 /*
  * Demo 专用：模拟浏览器或网络中间人在 POST 到 SP 之前修改已签名的 XML。
  *
@@ -8,8 +6,7 @@
  */
 const ROLE_ATTRIBUTE_VALUE = /(<saml:Attribute Name="role">\s*<saml:AttributeValue>)[^<]*/;
 
-function tamperWithRole(signedSamlResponse) {
+export function tamperWithRole(signedSamlResponse) {
     return signedSamlResponse.replace(ROLE_ATTRIBUTE_VALUE, "$1administrator");
 }
 
-module.exports = { tamperWithRole };

@@ -1,6 +1,4 @@
-"use strict";
-
-const crypto = require("node:crypto");
+import crypto from "node:crypto";
 
 /**
  * SessionStorePort 的实现。
@@ -8,7 +6,7 @@ const crypto = require("node:crypto");
  * 进程内 Map：重启即丢失，也不能多实例部署。生产环境换成 Redis 或数据库时，
  * use case 不需要修改。
  */
-function createInMemorySessionStore() {
+export function createInMemorySessionStore() {
     const usersBySessionId = new Map();
 
     return Object.freeze({
@@ -30,4 +28,3 @@ function createInMemorySessionStore() {
     });
 }
 
-module.exports = { createInMemorySessionStore };

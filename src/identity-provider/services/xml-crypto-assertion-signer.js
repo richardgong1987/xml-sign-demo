@@ -1,6 +1,4 @@
-"use strict";
-
-const { SignedXml } = require("xml-crypto");
+import { SignedXml } from "xml-crypto";
 
 const ASSERTION_XPATH = "//*[local-name(.)='Assertion']";
 const ASSERTION_ISSUER_XPATH = `${ASSERTION_XPATH}/*[local-name(.)='Issuer']`;
@@ -14,7 +12,7 @@ const ASSERTION_ISSUER_XPATH = `${ASSERTION_XPATH}/*[local-name(.)='Issuer']`;
  * @param {string} privateKeyPem
  * @returns {{ signAssertion: (samlResponseXml: string) => string }}
  */
-function createXmlCryptoAssertionSigner(privateKeyPem) {
+export function createXmlCryptoAssertionSigner(privateKeyPem) {
     return Object.freeze({
         signAssertion(samlResponseXml) {
             const signer = new SignedXml({
@@ -43,4 +41,3 @@ function createXmlCryptoAssertionSigner(privateKeyPem) {
     });
 }
 
-module.exports = { createXmlCryptoAssertionSigner };

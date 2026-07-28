@@ -1,5 +1,3 @@
-"use strict";
-
 /*
  * @node-saml/node-saml + xml-crypto
  * =================================
@@ -20,11 +18,11 @@
  * 请从 main() 开始阅读，再进入每个函数。
  */
 
-const crypto = require("node:crypto");
-const { SAML } = require("@node-saml/node-saml");
-const { DOMParser } = require("@xmldom/xmldom");
-const { SignedXml } = require("xml-crypto");
-const xpath = require("xpath");
+import crypto from "node:crypto";
+import { SAML } from "@node-saml/node-saml";
+import { DOMParser } from "@xmldom/xmldom";
+import { SignedXml } from "xml-crypto";
+import xpath from "xpath";
 
 // ---------------------------------------------------------------------------
 // 第一部分：双方约定的 SAML 配置
