@@ -1,9 +1,11 @@
 /*
- * 配置属于最外层。domain 和 use case 不读环境变量，也不认识端口号，
- * 只接收由组装根传进去的值。
+ * Configuration belongs to the outermost layer. Models and use cases read no
+ * environment variables and know nothing about port numbers; they only receive
+ * what the composition root passes in.
  *
- * 端口做成参数而不是常量，是因为 Entity ID 和各个地址都从端口推导出来：
- * 测试要在另一组端口上启动同一套服务，就必须能整组重算。
+ * Ports are a parameter rather than a constant because every entity ID and URL is
+ * derived from them: running the same pair of services on a second set of ports
+ * requires recomputing the whole set.
  */
 
 export const DEFAULT_PORTS = Object.freeze({
@@ -20,7 +22,8 @@ export function createSamlConfigs({ identityProviderPort, serviceProviderPort })
         entityId: `${serviceProviderBaseUrl}/api/saml/metadata`,
         assertionConsumerServiceUrl: `${serviceProviderBaseUrl}/api/saml/acs`,
 
-        // SP 不硬编码 IdP 的 SSO 地址和证书，启动时从这份 metadata 导入。
+        // The SP hardcodes neither the IdP's SSO URL nor its certificate; both are
+        // imported from this metadata document at startup.
         identityProviderMetadataUrl: `${identityProviderBaseUrl}/idp/metadata`,
 
         acceptedClockSkewMs: 5_000,
@@ -35,8 +38,8 @@ export function createSamlConfigs({ identityProviderPort, serviceProviderPort })
         acceptedClockSkewMs: 5_000,
 
         /*
-         * IdP 只为注册过的 SP 签发 Assertion。
-         * ACS 地址以这份注册表为准，不采用 AuthnRequest 里带来的地址。
+         * The IdP issues assertions only for service providers it has registered.
+         * The ACS URL comes from this registry, never from the AuthnRequest.
          */
         registeredServiceProviders: Object.freeze([
             Object.freeze({
@@ -48,4 +51,3 @@ export function createSamlConfigs({ identityProviderPort, serviceProviderPort })
 
     return { identityProviderConfig, serviceProviderConfig };
 }
-

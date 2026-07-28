@@ -22,8 +22,8 @@ const JSL_ONLINE = Object.freeze({
 });
 
 /*
- * 假的 AssertionSignerPort：记录收到的 XML，不做任何密码学运算。
- * 用例层因此不需要密钥就能测。
+ * Fake AssertionSignerPort: records the XML it is handed and performs no cryptography,
+ * so the use-case layer can be tested without any key material.
  */
 function createRecordingAssertionSigner() {
     const signedDocuments = [];
@@ -55,13 +55,13 @@ function validCommand(overrides = {}) {
     };
 }
 
-test("投递地址来自 IdP 的注册表，而不是请求参数", () => {
+test("takes the delivery address from the IdP registry rather than the request", () => {
     const result = createUseCase(createRecordingAssertionSigner()).execute(validCommand());
 
     assert.equal(result.assertionConsumerServiceUrl, JSL_ONLINE.assertionConsumerServiceUrl);
 });
 
-test("返回签名后的 SAMLResponse", () => {
+test("returns the signed SAMLResponse", () => {
     const assertionSigner = createRecordingAssertionSigner();
 
     const result = createUseCase(assertionSigner).execute(validCommand());
@@ -70,7 +70,7 @@ test("返回签名后的 SAMLResponse", () => {
     assert.equal(result.samlResponse, `<signed>${assertionSigner.signedDocuments[0]}</signed>`);
 });
 
-test("Assertion 的签发时间来自注入的时钟", () => {
+test("stamps the assertion with the time from the injected clock", () => {
     const assertionSigner = createRecordingAssertionSigner();
 
     createUseCase(assertionSigner).execute(validCommand());
@@ -78,7 +78,7 @@ test("Assertion 的签发时间来自注入的时钟", () => {
     assert.match(assertionSigner.signedDocuments[0], /IssueInstant="2026-07-28T09:00:00\.000Z"/);
 });
 
-test("未知用户不会走到签名步骤", () => {
+test("never reaches the signing step for an unknown user", () => {
     const assertionSigner = createRecordingAssertionSigner();
     const useCase = createUseCase(assertionSigner);
 
@@ -86,7 +86,7 @@ test("未知用户不会走到签名步骤", () => {
     assert.equal(assertionSigner.signedDocuments.length, 0);
 });
 
-test("未注册的 SP 不会走到签名步骤", () => {
+test("never reaches the signing step for an unregistered SP", () => {
     const assertionSigner = createRecordingAssertionSigner();
     const useCase = createUseCase(assertionSigner);
 

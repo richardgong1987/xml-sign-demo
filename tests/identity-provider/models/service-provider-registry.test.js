@@ -11,7 +11,7 @@ const JSL_ONLINE = Object.freeze({
     assertionConsumerServiceUrl: "https://jsl-online.example.test/api/saml/acs",
 });
 
-test("返回已注册 SP 的投递地址", () => {
+test("returns the delivery address of a registered SP", () => {
     const registry = createServiceProviderRegistry([JSL_ONLINE]);
 
     assert.equal(
@@ -20,7 +20,7 @@ test("返回已注册 SP 的投递地址", () => {
     );
 });
 
-test("未注册的 Entity ID 抛出 UnregisteredServiceProviderError", () => {
+test("throws UnregisteredServiceProviderError for an unregistered entity ID", () => {
     const registry = createServiceProviderRegistry([JSL_ONLINE]);
 
     assert.throws(

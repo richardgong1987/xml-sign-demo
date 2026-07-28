@@ -8,10 +8,10 @@ const REDIRECT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
 const METADATA_FETCH_TIMEOUT_MS = 5_000;
 
 /**
- * SP 启动时从 IdP metadata 导入信任配置。
+ * The SP imports its trust configuration from the IdP metadata at startup.
  *
- * 现实中这一步往往是人工的：IAM 团队把 metadata 文件发给 SP。
- * 这里改成 HTTP 抓取，是为了让“信任从哪里来”在 Demo 里看得见。
+ * In reality this step is usually manual: the IAM team hands the metadata file to the
+ * SP. Fetching it over HTTP here makes "where trust comes from" visible in the demo.
  *
  * @param {string} metadataUrl
  * @returns {Promise<{ entityId: string, singleSignOnUrl: string, signingCertificatePem: string }>}
@@ -20,14 +20,15 @@ export async function fetchIdentityProviderMetadata(metadataUrl) {
     let response;
 
     try {
-        // IdP 没起来时不要让 SP 一直挂着，否则启动失败的原因很难看出来。
+        // Don't let the SP hang forever when the IdP is down — the reason startup failed
+        // would be very hard to see.
         response = await fetch(metadataUrl, { signal: AbortSignal.timeout(METADATA_FETCH_TIMEOUT_MS) });
     } catch (error) {
-        throw new Error(`读取 IdP metadata 失败：无法访问 ${metadataUrl}`, { cause: error });
+        throw new Error(`Cannot read the IdP metadata: ${metadataUrl} is unreachable`, { cause: error });
     }
 
     if (!response.ok) {
-        throw new Error(`读取 IdP metadata 失败：${metadataUrl} 返回 ${response.status}`);
+        throw new Error(`Cannot read the IdP metadata: ${metadataUrl} returned ${response.status}`);
     }
 
     return parseIdentityProviderMetadata(await response.text());
@@ -44,7 +45,7 @@ function parseIdentityProviderMetadata(metadataXml) {
     const certificateBody = xpath.select("string(//*[local-name(.)='X509Certificate'])", document).trim();
 
     if (!entityId || !singleSignOnUrl || !certificateBody) {
-        throw new Error("IdP metadata 缺少 entityID、SingleSignOnService 或签名证书");
+        throw new Error("The IdP metadata is missing entityID, SingleSignOnService, or the signing certificate");
     }
 
     return Object.freeze({
@@ -53,4 +54,3 @@ function parseIdentityProviderMetadata(metadataXml) {
         signingCertificatePem: toCertificatePem(certificateBody),
     });
 }
-

@@ -14,7 +14,7 @@ const VALID_PROFILE = Object.freeze({
     sessionIndex: "_session-1",
 });
 
-test("保留断言里的身份字段", () => {
+test("keeps the identity fields carried by the assertion", () => {
     const user = createAuthenticatedUser(VALID_PROFILE);
 
     assert.equal(user.nameId, "hanjin");
@@ -22,14 +22,14 @@ test("保留断言里的身份字段", () => {
     assert.equal(user.sessionIndex, "_session-1");
 });
 
-test("缺少 NameID 时拒绝创建", () => {
+test("refuses to be created without a NameID", () => {
     assert.throws(
         () => createAuthenticatedUser({ ...VALID_PROFILE, nameId: "" }),
         InvalidAuthenticatedUserError,
     );
 });
 
-test("创建之后不可修改", () => {
+test("cannot be modified after creation", () => {
     const user = createAuthenticatedUser(VALID_PROFILE);
 
     assert.throws(() => {

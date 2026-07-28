@@ -5,9 +5,9 @@ const SHARED_VIEWS_DIR = path.join(import.meta.dirname, "..", "views");
 const PUBLIC_DIR = path.join(import.meta.dirname, "..", "public");
 
 /**
- * 让一个 Express app 用 EJS 渲染：先找该项目自己的 views/，
- * 找不到再回落到 shared/views 里的公共 layout（_head / _foot）。
- * 同时对外提供 shared/public 里的静态资源。
+ * Wires EJS into an Express app: templates resolve against the project's own
+ * views/ first, then fall back to shared/views for the common layout
+ * (_head / _foot). Also serves the shared stylesheet from shared/public.
  *
  * @param {import("express").Application} app
  * @param {string} ownViewsDir
@@ -19,12 +19,12 @@ export function useEjsViews(app, ownViewsDir) {
     app.set("views", viewDirectories);
 
     /*
-     * Express 只把 views 目录用于 res.render，不会传给模板引擎，
-     * 而 EJS 解析 include 时读的是 options.views。
-     * app.locals 会被合并进渲染参数，于是模板里可以直接写 include("_head")。
+     * Express uses its views setting for res.render only and never forwards it to
+     * the template engine, while EJS resolves include() from options.views.
+     * app.locals is merged into the render options, which is what lets a template
+     * simply write include("_head").
      */
     app.locals.views = viewDirectories;
 
     app.use(express.static(PUBLIC_DIR));
 }
-

@@ -1,14 +1,14 @@
-<%- include("_head", { title: "正在跳转回 SP" }) %>
+<%- include("_head", { title: "Returning to the service provider" }) %>
 
-<h1>IdP 已签发 SAMLResponse</h1>
+<h1>The IdP issued a SAMLResponse</h1>
 
-<p>HTTP-POST 绑定：IdP 无法直接调用 SP，只能让浏览器把 SAMLResponse
-    POST 到 <code><%= assertionConsumerServiceUrl %></code></p>
+<p>HTTP-POST binding: the IdP cannot call the SP directly, so the browser POSTs the
+    SAMLResponse to <code><%= assertionConsumerServiceUrl %></code></p>
 
 <form id="saml-post-form" method="post" action="<%= assertionConsumerServiceUrl %>">
     <input type="hidden" name="SAMLResponse" value="<%= samlResponseBase64 %>">
     <input type="hidden" name="RelayState" value="<%= relayState %>">
-    <noscript><button type="submit">继续</button></noscript>
+    <noscript><button type="submit">Continue</button></noscript>
 </form>
 
 <script>document.getElementById("saml-post-form").submit();</script>

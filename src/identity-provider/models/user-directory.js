@@ -1,11 +1,11 @@
 /*
- * IdP 的用户目录。生产环境是 LDAP / OpenAM 的身份库，
- * 这里用常量表示，好让 Demo 不依赖任何外部系统。
+ * The IdP's user directory. In production this is LDAP or the OpenAM identity
+ * store; here it is a constant so the demo depends on no external system.
  */
 
 export class UnknownUserError extends Error {
     constructor(uid) {
-        super(`IdP 无法认证未知用户：${uid}`);
+        super(`The IdP cannot authenticate an unknown user: ${uid}`);
         this.name = "UnknownUserError";
     }
 }
@@ -26,4 +26,3 @@ export function findUser(uid) {
 
     return USERS_BY_UID[uid];
 }
-

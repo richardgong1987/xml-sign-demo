@@ -12,7 +12,7 @@ import { useEjsViews } from "../shared/utils/view-engine.js";
 import { createHttpErrorHandler } from "../shared/utils/http-error-handler.js";
 
 /**
- * SP 这个项目的装配点。
+ * Wiring point for the SP project.
  *
  * @param {{
  *   config: object,

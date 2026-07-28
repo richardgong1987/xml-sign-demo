@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 
 /**
- * SessionStorePort 的实现。
+ * SessionStorePort implementation.
  *
- * 进程内 Map：重启即丢失，也不能多实例部署。生产环境换成 Redis 或数据库时，
- * use case 不需要修改。
+ * An in-process Map: sessions are lost on restart and cannot be shared across
+ * instances. Replacing it with Redis or a database requires no change to the use cases.
  */
 export function createInMemorySessionStore() {
     const usersBySessionId = new Map();
@@ -17,7 +17,7 @@ export function createInMemorySessionStore() {
             return sessionId;
         },
 
-        // 查不到会话是正常状态（未登录、已过期），不是异常。
+        // A missing session is a normal state (not signed in, expired), not an error.
         find(sessionId) {
             return usersBySessionId.get(sessionId) ?? null;
         },
@@ -27,4 +27,3 @@ export function createInMemorySessionStore() {
         },
     });
 }
-

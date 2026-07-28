@@ -6,10 +6,11 @@
 const DEFAULT_LANDING_PAGE = "/profile";
 
 /**
- * SP 校验 IdP 签发的 SAMLResponse，并为通过校验的用户建立本地会话。
+ * The SP validates the SAMLResponse the IdP issued and opens a local session for the
+ * user it describes.
  *
- * 这是整个流程的信任转换点：SAML 断言在这里换成 SP 自己的会话，
- * 之后的业务请求不再关心 SAML。
+ * This is where trust is converted: the SAML assertion becomes the SP's own session,
+ * and no request after this one has to know anything about SAML.
  */
 export class CompleteSingleSignOnUseCase {
     #samlGateway;
@@ -36,12 +37,12 @@ export class CompleteSingleSignOnUseCase {
 }
 
 /*
- * RelayState 来自外部，会原样变成重定向目标。
- * 只接受站内路径，否则 IdP 或攻击者就能把登录后的用户送到任意站点。
+ * RelayState arrives from outside and becomes a redirect target verbatim.
+ * Only local paths are accepted; otherwise the IdP — or an attacker — could send a
+ * freshly signed-in user to any site at all.
  */
 function toSafeLandingPage(relayState) {
     const isLocalPath = relayState.startsWith("/") && !relayState.startsWith("//");
 
     return isLocalPath ? relayState : DEFAULT_LANDING_PAGE;
 }
-

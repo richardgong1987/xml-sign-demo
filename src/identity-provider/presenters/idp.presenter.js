@@ -1,13 +1,14 @@
 /*
- * Presenter 只回答两件事：用哪个模板，模板需要哪些数据。
- * HTML 在 views/ 下的 EJS 模板里，转义由 EJS 的 <%= %> 负责。
+ * A presenter answers two questions only: which template, and what data it needs.
+ * The HTML lives in the EJS templates under views/, and EJS's <%= %> does the escaping.
  */
 
 /**
- * IdP 的登录页。
+ * The IdP login page.
  *
- * AuthnRequest 的上下文用隐藏字段带到下一步。生产环境应该放进 IdP 自己的会话，
- * 避免用户改写；这里为了让流程一眼看得见而显式暴露。
+ * The AuthnRequest context is carried to the next step in hidden fields. Production
+ * should keep it in the IdP's own session so the user cannot rewrite it; exposing it
+ * here makes the flow visible at a glance.
  */
 export function toLoginPageView({ authnRequest, relayState, users }) {
     return {
@@ -22,15 +23,15 @@ export function toLoginPageView({ authnRequest, relayState, users }) {
 }
 
 /**
- * HTTP-POST 绑定：IdP 无法直接调用 SP，只能返回一个自动提交的表单，
- * 由浏览器把 SAMLResponse POST 到 SP 的 ACS。
+ * HTTP-POST binding: the IdP cannot call the SP directly, so it returns a
+ * self-submitting form and lets the browser POST the SAMLResponse to the SP's ACS.
  */
 export function toAutoPostFormView({ assertionConsumerServiceUrl, samlResponse, relayState }) {
     return {
         view: "auto-post",
         model: {
             assertionConsumerServiceUrl,
-            // HTTP-POST 绑定要求 SAMLResponse 以 Base64 传输。
+            // The HTTP-POST binding transports the SAMLResponse base64-encoded.
             samlResponseBase64: Buffer.from(samlResponse, "utf8").toString("base64"),
             relayState,
         },

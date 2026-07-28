@@ -1,12 +1,12 @@
-<%- include("_head", { title: "Demo OpenAM 登录" }) %>
+<%- include("_head", { title: "Demo OpenAM sign-in" }) %>
 
-<h1>Demo OpenAM（IdP）</h1>
+<h1>Demo OpenAM (IdP)</h1>
 
-<p>已收到来自 SP 的 AuthnRequest：</p>
+<p>Received an AuthnRequest from the service provider:</p>
 <ul>
-    <li>SP Entity ID：<code><%= serviceProviderEntityId %></code></li>
-    <li>Request ID：<code><%= authnRequestId %></code></li>
-    <li>RelayState：<code><%= relayState || "（空）" %></code></li>
+    <li>SP entity ID: <code><%= serviceProviderEntityId %></code></li>
+    <li>Request ID: <code><%= authnRequestId %></code></li>
+    <li>RelayState: <code><%= relayState || "(empty)" %></code></li>
 </ul>
 
 <form method="post" action="/idp/login">
@@ -14,12 +14,12 @@
     <input type="hidden" name="serviceProviderEntityId" value="<%= serviceProviderEntityId %>">
     <input type="hidden" name="relayState" value="<%= relayState %>">
 
-    <h2>选择演示用户</h2>
+    <h2>Pick a demo user</h2>
     <ul>
         <% users.forEach((user) => { %>
         <li>
             <button type="submit" name="uid" value="<%= user.uid %>">
-                以 <%= user.uid %> 登录（role=<%= user.role %>）
+                Sign in as <%= user.uid %> (role=<%= user.role %>)
             </button>
         </li>
         <% }) %>
@@ -27,7 +27,7 @@
 
     <label>
         <input type="checkbox" name="tamper" value="on">
-        模拟中间人：签名之后把 role 改成 administrator
+        Simulate a man-in-the-middle: change role to administrator after signing
     </label>
 </form>
 

@@ -6,13 +6,14 @@ import { toHomePageView, toProfilePageView } from "../presenters/sp.presenter.js
 const SESSION_COOKIE = "sp_session";
 
 /*
- * ACS 是跨站 POST（来自 IdP 域的表单），会话 Cookie 必须允许在这种导航中生效。
- * SameSite=Lax 让随后的顶层 GET 跳转仍然带上 Cookie，同时挡住跨站的写请求。
+ * The ACS receives a cross-site POST (a form served from the IdP's origin), so the
+ * session cookie has to survive that navigation. SameSite=Lax still sends the cookie
+ * on the top-level GET redirect that follows, while blocking cross-site writes.
  */
 const SESSION_COOKIE_OPTIONS = Object.freeze({ httpOnly: true, sameSite: "lax", path: "/" });
 
 /**
- * SP 的 HTTP 边界。
+ * The SP's HTTP boundary.
  *
  * @param {{
  *   startSingleSignOn: { execute: Function },

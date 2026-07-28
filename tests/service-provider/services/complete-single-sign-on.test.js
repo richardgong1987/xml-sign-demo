@@ -8,8 +8,8 @@ import {
 const AUTHENTICATED_USER = Object.freeze({ nameId: "hanjin", role: "trader" });
 
 /*
- * 假的 SamlGatewayPort：可以选择校验通过还是失败，
- * 于是“签名无效时会发生什么”不需要真的伪造一份 XML 签名。
+ * Fake SamlGatewayPort that can be told to accept or reject, so "what happens on an
+ * invalid signature" needs no forged XML signature.
  */
 function createStubSamlGateway({ rejectionReason } = {}) {
     return {
@@ -47,7 +47,7 @@ function createUseCase(gatewayOptions) {
     };
 }
 
-test("校验通过后为断言里的用户建立会话", async () => {
+test("opens a session for the asserted user once validation succeeds", async () => {
     const { useCase, sessionStore } = createUseCase();
 
     const result = await useCase.execute({ samlResponse: "base64", relayState: "/profile" });
@@ -56,7 +56,7 @@ test("校验通过后为断言里的用户建立会话", async () => {
     assert.equal(result.sessionId, "session-1");
 });
 
-test("RelayState 是站内路径时按它跳转", async () => {
+test("redirects to RelayState when it is a local path", async () => {
     const { useCase } = createUseCase();
 
     const result = await useCase.execute({ samlResponse: "base64", relayState: "/orders/42" });
@@ -64,7 +64,7 @@ test("RelayState 是站内路径时按它跳转", async () => {
     assert.equal(result.returnTo, "/orders/42");
 });
 
-test("RelayState 为空时回落到默认页面", async () => {
+test("falls back to the default landing page when RelayState is empty", async () => {
     const { useCase } = createUseCase();
 
     const result = await useCase.execute({ samlResponse: "base64", relayState: "" });
@@ -72,17 +72,17 @@ test("RelayState 为空时回落到默认页面", async () => {
     assert.equal(result.returnTo, "/profile");
 });
 
-test("RelayState 指向站外时回落到默认页面", async () => {
+test("falls back to the default landing page when RelayState points off-site", async () => {
     const { useCase } = createUseCase();
 
     for (const relayState of ["https://attacker.example.test", "//attacker.example.test"]) {
         const result = await useCase.execute({ samlResponse: "base64", relayState });
 
-        assert.equal(result.returnTo, "/profile", `RelayState=${relayState} 不应被用作跳转目标`);
+        assert.equal(result.returnTo, "/profile", `RelayState=${relayState} must not be used as a redirect target`);
     }
 });
 
-test("校验失败时不建立会话", async () => {
+test("opens no session when validation fails", async () => {
     const { useCase, sessionStore } = createUseCase({ rejectionReason: "Invalid signature" });
 
     await assert.rejects(

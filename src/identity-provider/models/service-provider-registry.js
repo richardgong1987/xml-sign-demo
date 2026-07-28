@@ -1,16 +1,17 @@
 export class UnregisteredServiceProviderError extends Error {
     constructor(entityId) {
-        super(`IdP 未注册这个 SP：${entityId}`);
+        super(`The IdP has no registration for this SP: ${entityId}`);
         this.name = "UnregisteredServiceProviderError";
     }
 }
 
 /**
- * IdP 认可的 SP 列表。
+ * The service providers this IdP trusts.
  *
- * 这是一条安全规则，不只是配置查表：Assertion 的 Audience 和投递地址
- * 都由这份注册表决定。如果改成信任 AuthnRequest 里带来的 ACS 地址，
- * 攻击者就能让 IdP 把合法的 Assertion 投递到自己的服务器。
+ * This is a security rule, not merely a lookup table: both the assertion's Audience
+ * and its delivery address are decided here. Trusting the ACS URL carried in the
+ * AuthnRequest instead would let an attacker have the IdP deliver a perfectly valid
+ * assertion to a server of their choosing.
  */
 export function createServiceProviderRegistry(serviceProviders) {
     const byEntityId = new Map(
@@ -29,4 +30,3 @@ export function createServiceProviderRegistry(serviceProviders) {
         },
     });
 }
-

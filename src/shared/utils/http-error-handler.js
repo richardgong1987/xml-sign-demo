@@ -1,7 +1,8 @@
 import { styleText } from "node:util";
 
 /*
- * 边界处的错误翻译：把内部错误变成 HTTP 响应，并且不把堆栈泄露给浏览器。
+ * Error translation at the boundary: turn an internal error into an HTTP response
+ * without leaking the stack trace to the browser.
  */
 export function createHttpErrorHandler(serviceName) {
     return function handleHttpError(error, request, response, next) {
@@ -11,16 +12,16 @@ export function createHttpErrorHandler(serviceName) {
         }
 
         console.error(
-            styleText("red", `[${serviceName}] ${request.method} ${request.originalUrl} 失败：`),
+            styleText("red", `[${serviceName}] ${request.method} ${request.originalUrl} failed:`),
             describeErrorChain(error),
         );
 
-        response.status(400).type("text/plain; charset=utf-8").send(`${serviceName} 处理失败：${error.message}`);
+        response.status(400).type("text/plain; charset=utf-8").send(`${serviceName} rejected the request: ${error.message}`);
     };
 }
 
 /*
- * 日志里展开整条 cause 链，浏览器只拿到最外层的一句话。
+ * Unfold the whole cause chain into the log; the browser only sees the outermost message.
  */
 function describeErrorChain(error) {
     const messages = [];
@@ -29,5 +30,5 @@ function describeErrorChain(error) {
         messages.push(current.message);
     }
 
-    return messages.join(" ← ");
+    return messages.join(" <- ");
 }

@@ -7,13 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm install        # install dependencies
 npm test           # everything (38 cases) — the verification loop
-npm run test:unit  # domain + use case only (27), no HTTP/keys needed
+npm run test:unit  # models + services only (27), no HTTP/keys needed
 npm run test:e2e   # end-to-end only (11), boots real servers on :14000/:15000
-npm start          # HTTP demo: IdP on :4000 + SP on :5000
-npm run demo       # offline demo: single process, direct method calls (demo.js)
+npm start          # IdP on :4000 + SP on :5000 (override with -- --idp-port / --sp-port)
 ```
 
-Tests use Node's built-in `node:test` — no test framework dependency. Run a single file with `node --test tests/features/identity-provider/saml-response.factory.test.js`, or a single case with `--test-name-pattern`. There is no linter or build step.
+Tests use Node's built-in `node:test` — no test framework dependency. Run a single file with `node --test tests/identity-provider/models/saml-response.factory.test.js`, or a single case with `--test-name-pattern`. There is no linter or build step.
 
 E2E tests call `startSamlDemo()` from `src/bootstrap.js` directly, so they exercise real wiring, and they use their own ports — `npm start` can stay running while they execute.
 
@@ -21,10 +20,7 @@ Note: `package-lock.json` is out of sync with `package.json`, so `npm ci` fails.
 
 ## What this repository is
 
-A teaching demo of SAML 2.0 SSO, in two forms:
-
-- **`src/`** — the HTTP version. Two Express apps in one process, on separate ports, playing **Demo OpenAM (IdP, :4000)** and **JSL-online (SP, :5000)**. Shows how the two sides actually cooperate over the browser.
-- **`demo.js`** — the original offline version. No HTTP, direct method calls, focused only on sign/verify. Kept because it isolates the crypto from the protocol plumbing. It is standalone and does not share code with `src/`.
+A teaching demo of SAML 2.0 SSO. Two Express apps run in one process on separate ports, playing **Demo OpenAM (IdP, :4000)** and **JSL-online (SP, :5000)**, showing how the two sides actually cooperate through the browser.
 
 The design doc is `docs/design/saml-sso-http.md` — read it before changing boundaries; it records the dependency direction and the reasoning behind each trade-off.
 
@@ -61,7 +57,7 @@ Inside a project, where a file goes is decided by *what makes it change*: busine
 
 Rules that hold across the codebase:
 
-- ES Modules (`"type": "module"`), Node >= 20.11. Relative imports carry the `.js` extension; `import.meta.dirname` replaces `__dirname`.
+- ES Modules (`"type": "module"`), Node >= 24. Relative imports carry the `.js` extension; `import.meta.dirname` replaces `__dirname`. Modern built-ins are preferred over dependencies: `node:util`'s `styleText` (no chalk) and `parseArgs`, `AbortSignal.timeout()`, `RegExp.escape()`, `Error` `cause` chains, top-level await instead of a `main()` wrapper.
 - No HTML or CSS in JavaScript. Markup lives in each project's `views/*.ejs`; presenters return `{ view, model }` and nothing else; controllers render through `shared/utils/render-view.js`, so neither layer imports EJS. Escaping is EJS's `<%= %>` — don't hand-roll it. Every page opens with `include("_head", { title })` and closes with `include("_foot")`.
 - `shared/utils/view-engine.js` sets each app's views to `[ownViews, sharedViews]`. It also mirrors that list into `app.locals.views` — Express does not forward its views setting to the template engine, and EJS resolves `include()` from `options.views`. Removing that line silently breaks every `include("_head")`.
 - `models/` and the use-case files in `services/` import no `express`, no `xml-crypto`, no `@node-saml/node-saml`. Those libraries appear only in the adapter files under `services/` (`*.gateway.js`, `*-signer.js`, `*.client.js`, `*.parser.js`), in `controllers/`, and in `app.js`. Ports are declared as JSDoc `@typedef` at the top of the use case that needs them.
@@ -82,7 +78,6 @@ Two boundaries that carry security meaning, not just structure:
 
 ## Conventions
 
-- Comments, docs, and user-facing output are in Chinese. Match that.
-- ES Modules with explicit `.js` extensions on relative imports, Node >= 20.11.
+- Comments, docs, test names, and user-facing output are in English. Match that.
 - XPath uses `local-name(.)` rather than namespace prefixes, since SAML documents vary in prefix choice.
 - Comments explain *why* — a business rule, a security consequence, or a production-vs-demo difference. This repo exists to be read, so those comments are the deliverable; redundant step-by-step narration is not.

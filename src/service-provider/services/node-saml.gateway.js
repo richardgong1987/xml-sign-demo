@@ -3,10 +3,10 @@ import { SAML } from "@node-saml/node-saml";
 import { createAuthenticatedUser } from "../models/authenticated-user.js";
 
 /**
- * SamlGatewayPort 的实现，封装 @node-saml/node-saml。
+ * SamlGatewayPort implementation wrapping @node-saml/node-saml.
  *
- * node-saml 负责 SAML 协议；它内部再调用 xml-crypto 完成 XML 签名校验。
- * 除了这个文件，SP 的其它代码不认识 node-saml。
+ * node-saml owns the SAML protocol and internally calls xml-crypto to verify the XML
+ * signature. No other file on the SP side knows node-saml exists.
  *
  * @param {{
  *   serviceProvider: { entityId: string, assertionConsumerServiceUrl: string, acceptedClockSkewMs: number },
@@ -23,22 +23,24 @@ export function createNodeSamlGateway({ serviceProvider, identityProvider }) {
         idpIssuer: identityProvider.entityId,
 
         /*
-         * 信任的根：只有用这张证书对应的私钥签出来的 Assertion 才会被接受。
-         * 它来自 IdP metadata，SP 不持有 IdP 私钥。
+         * The root of trust: only assertions signed with the private key matching this
+         * certificate are accepted. It comes from the IdP metadata; the SP never holds
+         * the IdP private key.
          */
         idpCert: identityProvider.signingCertificatePem,
 
-        // 本 Demo 只对 Assertion 签名，外层 Response 不签。
+        // This demo signs the assertion only, not the enclosing response.
         wantAssertionsSigned: true,
         wantAuthnResponseSigned: false,
 
-        // SP-initiated 流程，必须校验 InResponseTo，防止重放别处的 Assertion。
+        // SP-initiated flow, so InResponseTo must be checked to block replayed assertions.
         validateInResponseTo: "always",
 
         acceptedClockSkewMs: serviceProvider.acceptedClockSkewMs,
         disableRequestedAuthnContext: true,
 
-        // 与 IdP metadata 公布的 NameIDFormat 保持一致，否则 SP metadata 会误导对接方。
+        // Match the NameIDFormat the IdP metadata advertises, or the SP metadata would
+        // mislead whoever integrates with it.
         identifierFormat: "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
     });
 
@@ -62,7 +64,8 @@ export function createNodeSamlGateway({ serviceProvider, identityProvider }) {
 }
 
 /*
- * 边界翻译：node-saml 的 profile 是外部形状，域内只认 AuthenticatedUser。
+ * Boundary translation: node-saml's profile is an external shape; inside the SP only
+ * AuthenticatedUser exists.
  */
 function toAuthenticatedUser(profile) {
     return createAuthenticatedUser({
@@ -73,4 +76,3 @@ function toAuthenticatedUser(profile) {
         sessionIndex: profile.sessionIndex,
     });
 }
-

@@ -12,8 +12,8 @@ import { useEjsViews } from "../shared/utils/view-engine.js";
 import { createHttpErrorHandler } from "../shared/utils/http-error-handler.js";
 
 /**
- * IdP 这个项目的装配点：在这里，也只在这里，
- * 把用例需要的 port 换成具体实现。
+ * Wiring point for the IdP project: here, and only here, the ports a use case
+ * depends on are bound to concrete implementations.
  *
  * @param {{ config: object, signingCredential: { privateKeyPem: string, certificatePem: string } }} params
  */

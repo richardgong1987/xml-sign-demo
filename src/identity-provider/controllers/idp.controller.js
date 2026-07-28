@@ -7,7 +7,8 @@ import { toLoginPageView, toAutoPostFormView } from "../presenters/idp.presenter
 import { tamperWithRole } from "../services/tampering.simulator.js";
 
 /**
- * IdP 的 HTTP 边界。只做三件事：翻译输入、调用 use case、交给 presenter。
+ * The IdP's HTTP boundary. It does three things only: translate the input, call the
+ * use case, hand the result to a presenter.
  *
  * @param {{ issueSamlResponse: { execute: Function }, metadataXml: string }} dependencies
  */

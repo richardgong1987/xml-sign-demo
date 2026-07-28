@@ -7,24 +7,24 @@ import {
     UnknownUserError,
 } from "../../../src/identity-provider/models/user-directory.js";
 
-test("列出所有可登录的演示用户", () => {
+test("lists every demo user who can sign in", () => {
     const uids = listUsers().map((user) => user.uid);
 
     assert.deepEqual(uids, ["hanjin", "sakura"]);
 });
 
-test("按 uid 找到用户及其属性", () => {
+test("finds a user and their attributes by uid", () => {
     const user = findUser("hanjin");
 
     assert.equal(user.email, "hanjin@example.test");
     assert.equal(user.role, "trader");
 });
 
-test("未知 uid 抛出 UnknownUserError", () => {
+test("throws UnknownUserError for an unknown uid", () => {
     assert.throws(() => findUser("nobody"), UnknownUserError);
 });
 
-test("不把 Object 原型上的属性当成用户", () => {
+test("does not mistake Object prototype members for users", () => {
     assert.throws(() => findUser("toString"), UnknownUserError);
     assert.throws(() => findUser("constructor"), UnknownUserError);
 });

@@ -5,10 +5,10 @@ import { startSamlDemo } from "../../src/bootstrap.js";
 import { createBrowser, readHiddenFields, readFormAction } from "./browser.js";
 
 /*
- * 用真实的 HTTP 走完整的 SP-initiated SSO 流程。
+ * Drives the whole SP-initiated SSO flow over real HTTP.
  *
- * 端口刻意避开 npm start 用的 4000/5000，
- * 这样开着开发服务器也能跑测试。
+ * The ports deliberately avoid the 4000/5000 pair used by npm start, so the suite can
+ * run while a development server is up.
  */
 const TEST_PORTS = Object.freeze({ identityProviderPort: 14000, serviceProviderPort: 15000 });
 
@@ -28,13 +28,13 @@ after(async () => {
     await demo.stop();
 });
 
-test("SP 启动时从 IdP metadata 导入 Entity ID、SSO 地址和签名证书", () => {
+test("the SP imports entity ID, SSO URL, and signing certificate from the IdP metadata at startup", () => {
     assert.equal(demo.identityProvider.entityId, demo.identityProviderConfig.entityId);
     assert.equal(demo.identityProvider.singleSignOnUrl, demo.identityProviderConfig.singleSignOnUrl);
     assert.match(demo.identityProvider.signingCertificatePem, /^-----BEGIN CERTIFICATE-----/);
 });
 
-test("IdP metadata 公布签名证书与 HTTP-Redirect 的 SSO 地址", async () => {
+test("the IdP metadata publishes the signing certificate and an HTTP-Redirect SSO endpoint", async () => {
     const response = await fetch(`${identityProviderBaseUrl}/idp/metadata`);
     const metadata = await response.text();
 
@@ -44,7 +44,7 @@ test("IdP metadata 公布签名证书与 HTTP-Redirect 的 SSO 地址", async ()
     assert.ok(metadata.includes(demo.identityProviderConfig.singleSignOnUrl));
 });
 
-test("SP metadata 公布 ACS 地址，并声明要求 Assertion 已签名", async () => {
+test("the SP metadata publishes the ACS URL and demands signed assertions", async () => {
     const response = await fetch(`${serviceProviderBaseUrl}/api/saml/metadata`);
     const metadata = await response.text();
 
@@ -53,7 +53,7 @@ test("SP metadata 公布 ACS 地址，并声明要求 Assertion 已签名", asyn
     assert.ok(metadata.includes(demo.serviceProviderConfig.assertionConsumerServiceUrl));
 });
 
-test("GET /login 带着 SAMLRequest 与 RelayState 跳转到 IdP", async () => {
+test("GET /login redirects to the IdP carrying SAMLRequest and RelayState", async () => {
     const authorizeUrl = new URL(await startLogin(createBrowser(), "/profile"));
 
     assert.equal(authorizeUrl.origin + authorizeUrl.pathname, demo.identityProviderConfig.singleSignOnUrl);
@@ -61,7 +61,7 @@ test("GET /login 带着 SAMLRequest 与 RelayState 跳转到 IdP", async () => {
     assert.equal(authorizeUrl.searchParams.get("RelayState"), "/profile");
 });
 
-test("IdP 登录页展示解析出来的 AuthnRequest 上下文", async () => {
+test("the IdP login page shows the AuthnRequest context it parsed", async () => {
     const browser = createBrowser();
     const loginPage = await openIdpLoginPage(browser, await startLogin(browser, "/profile"));
 
@@ -70,7 +70,7 @@ test("IdP 登录页展示解析出来的 AuthnRequest 上下文", async () => {
     assert.match(loginPage.fields.authnRequestId, /^_[0-9a-f]+$/);
 });
 
-test("完整流程：登录成功后 SP 建立会话并展示断言里的用户", async () => {
+test("full flow: a successful sign-in opens an SP session and shows the asserted user", async () => {
     const browser = createBrowser();
 
     const acsResponse = await runSingleSignOn(browser, { uid: "hanjin" });
@@ -87,7 +87,7 @@ test("完整流程：登录成功后 SP 建立会话并展示断言里的用户"
     assert.ok(html.includes("trader"));
 });
 
-test("RelayState 把用户送回登录前想去的页面", async () => {
+test("RelayState returns the user to the page they wanted before signing in", async () => {
     const browser = createBrowser();
 
     const acsResponse = await runSingleSignOn(browser, { uid: "sakura", returnTo: "/orders/42" });
@@ -95,14 +95,14 @@ test("RelayState 把用户送回登录前想去的页面", async () => {
     assert.equal(acsResponse.headers.get("location"), "/orders/42");
 });
 
-test("未登录访问 /profile 会跳回首页", async () => {
+test("requesting /profile without a session redirects to the home page", async () => {
     const response = await createBrowser().get(`${serviceProviderBaseUrl}/profile`);
 
     assert.equal(response.status, 302);
     assert.equal(response.headers.get("location"), "/");
 });
 
-test("退出登录后会话失效", async () => {
+test("signing out invalidates the session", async () => {
     const browser = createBrowser();
     await runSingleSignOn(browser, { uid: "hanjin" });
 
@@ -114,7 +114,7 @@ test("退出登录后会话失效", async () => {
     assert.equal(profile.headers.get("location"), "/");
 });
 
-test("中间人篡改 role 之后，SP 拒绝建立会话", async () => {
+test("after a man-in-the-middle edits role, the SP refuses to open a session", async () => {
     const browser = createBrowser();
 
     const acsResponse = await runSingleSignOn(browser, { uid: "hanjin", shouldTamper: true });
@@ -124,14 +124,14 @@ test("中间人篡改 role 之后，SP 拒绝建立会话", async () => {
     assert.equal(browser.hasCookie(SESSION_COOKIE), false);
 });
 
-test("重放同一份 SAMLResponse 会被拒绝", async () => {
+test("replaying the same SAMLResponse is rejected", async () => {
     const browser = createBrowser();
     const autoPostForm = await issueSamlResponse(browser, { uid: "hanjin" });
 
     const firstAttempt = await browser.postForm(autoPostForm.action, autoPostForm.fields);
     assert.equal(firstAttempt.status, 302);
 
-    // InResponseTo 只能兑现一次，重放的 Assertion 对不上任何未完成的 AuthnRequest。
+    // InResponseTo can be redeemed once only; a replayed assertion matches no outstanding AuthnRequest.
     const replay = await createBrowser().postForm(autoPostForm.action, autoPostForm.fields);
 
     assert.equal(replay.status, 400);
@@ -139,7 +139,8 @@ test("重放同一份 SAMLResponse 会被拒绝", async () => {
 });
 
 /*
- * 下面是把浏览器行为拆成的四步，顺序与 README 的时序图一致。
+ * The browser behaviour below is split into four steps, in the same order as the
+ * sequence diagram in the README.
  */
 
 async function startLogin(browser, returnTo) {
@@ -147,7 +148,7 @@ async function startLogin(browser, returnTo) {
         `${serviceProviderBaseUrl}/login?returnTo=${encodeURIComponent(returnTo)}`,
     );
 
-    assert.equal(response.status, 302, "GET /login 应该重定向到 IdP");
+    assert.equal(response.status, 302, "GET /login should redirect to the IdP");
 
     return response.headers.get("location");
 }

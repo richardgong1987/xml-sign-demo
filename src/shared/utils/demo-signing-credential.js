@@ -3,11 +3,12 @@ import selfsigned from "selfsigned";
 const CERTIFICATE_VALID_DAYS = 1;
 
 /**
- * 生产环境中，IdP 的私钥与证书由企业 PKI 签发，长期保存在 IdP 一侧，
- * SP 只拿到证书。
+ * In production the IdP's private key and certificate are issued by a corporate PKI
+ * and stay on the IdP side; the SP receives nothing but the certificate.
  *
- * Demo 每次启动临时生成一份，避免把私钥文件提交进仓库。
- * 代价是：重启后之前签发的 Assertion 全部失效。
+ * This demo mints a throwaway pair on every start so that no private key has to be
+ * committed to the repository. The cost: assertions issued before a restart no
+ * longer verify afterwards.
  *
  * @returns {Promise<{ privateKeyPem: string, certificatePem: string }>}
  */
@@ -27,4 +28,3 @@ export async function createDemoSigningCredential(commonName) {
 function daysFromNow(days) {
     return new Date(Date.now() + days * 24 * 60 * 60_000);
 }
-

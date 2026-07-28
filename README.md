@@ -1,172 +1,175 @@
-# SAML SSO Demo：IdP 与 SP 如何配合
+# SAML SSO Demo: how an IdP and an SP cooperate
 
-这个仓库用两种方式演示同一件事：`@node-saml/node-saml` 与 `xml-crypto` 的分工。
+Two Express services in one process, playing both sides of a SAML 2.0 single sign-on
+so you can watch the handshake happen in a browser.
 
-| 方式 | 命令 | 说明 |
-| --- | --- | --- |
-| HTTP 版 | `npm start` | 两个 Express 服务，浏览器里走完整 SSO 流程 |
-| 离线版 | `npm run demo` | 单进程直接方法调用，只看签名与验签 |
-| 测试 | `npm test` | 单元测试 + 端到端测试 |
+| | Command |
+| --- | --- |
+| Run the demo | `npm start` |
+| Run the tests | `npm test` |
 
-## 运行环境
+## Requirements
 
-- Node.js 20.11 或更高版本
+- Node.js 24 or newer
 - npm
 
-代码使用 ES Module（`package.json` 里 `"type": "module"`，所以 `.js` 即 ESM）。
-路径用 `import.meta.dirname`，这是要求 20.11 的原因。
+The code is written as ES Modules (`"type": "module"` in `package.json`, so every
+`.js` file is an ES module). It uses `import.meta.dirname`, `node:util`'s `styleText`
+and `parseArgs`, `AbortSignal.timeout()`, and `RegExp.escape()` — hence the Node 24
+floor.
 
-## HTTP 版
+## Running it
 
 ```bash
 npm install
 npm start
 ```
 
-然后打开 <http://localhost:5000>，点击「通过 Demo OpenAM 登录」。
+Then open <http://localhost:5000> and click "Sign in through Demo OpenAM".
 
-进程里同时启动两个独立的服务：
+Two independent services start in the same process:
 
-- **Demo OpenAM（IdP）** `http://localhost:4000`
-- **JSL-online（SP）** `http://localhost:5000`
+- **Demo OpenAM (IdP)** — `http://localhost:4000`
+- **JSL-online (SP)** — `http://localhost:5000`
 
-### 接口
+Both ports can be overridden:
 
-| 服务 | 接口 | 作用 |
+```bash
+npm start -- --idp-port 4001 --sp-port 5001
+```
+
+### Endpoints
+
+| Service | Endpoint | Purpose |
 | --- | --- | --- |
-| IdP | `GET /idp/metadata` | 公布 Entity ID、SSO 地址和签名证书 |
-| IdP | `GET /idp/sso` | 接收 AuthnRequest，显示登录页 |
-| IdP | `POST /idp/login` | 用私钥签发 SAMLResponse，自动 POST 回 SP |
-| SP | `GET /login` | 生成 AuthnRequest，跳转到 IdP |
-| SP | `GET /api/saml/metadata` | SP metadata，交给 IdP 注册 |
-| SP | `POST /api/saml/acs` | 校验 SAMLResponse，建立会话 |
-| SP | `GET /profile` | 显示已登录用户 |
+| IdP | `GET /idp/metadata` | publishes entity ID, SSO URL, and signing certificate |
+| IdP | `GET /idp/sso` | receives the AuthnRequest, shows the login page |
+| IdP | `POST /idp/login` | signs a SAMLResponse and auto-POSTs it back to the SP |
+| SP | `GET /login` | builds an AuthnRequest and redirects to the IdP |
+| SP | `GET /api/saml/metadata` | SP metadata, to be registered with the IdP |
+| SP | `POST /api/saml/acs` | validates the SAMLResponse and opens a session |
+| SP | `GET /profile` | shows the signed-in user |
 
-### 完整流程
+### The full flow
 
 ```text
-浏览器            SP (:5000)                      IdP (:4000)
-  │  GET /login       │                                │
-  │──────────────────>│ 生成 AuthnRequest              │
-  │<── 302 ───────────│                                │
-  │  GET /idp/sso?SAMLRequest=..&RelayState=..         │
-  │───────────────────────────────────────────────────>│ 解析 AuthnRequest
-  │<────────────────────────── 登录页面（选择演示用户）──│
-  │  POST /idp/login  │                                │
-  │───────────────────────────────────────────────────>│ xml-crypto 用私钥签 Assertion
-  │<────────────────────────── 自动提交表单（SAMLResponse）
-  │  POST /api/saml/acs                                │
-  │──────────────────>│ node-saml → xml-crypto 验签    │
-  │                   │ 验 Audience/Recipient/有效期    │
-  │<── 302 /profile ──│ Set-Cookie                     │
+Browser           SP (:5000)                      IdP (:4000)
+  |  GET /login       |                                |
+  |------------------>| builds the AuthnRequest        |
+  |<-- 302 -----------|                                |
+  |  GET /idp/sso?SAMLRequest=..&RelayState=..         |
+  |--------------------------------------------------->| parses the AuthnRequest
+  |<-------------------------- login page (pick a user)-|
+  |  POST /idp/login  |                                |
+  |--------------------------------------------------->| xml-crypto signs the assertion
+  |<-------------------------- self-submitting form ----|
+  |  POST /api/saml/acs                                |
+  |------------------>| node-saml -> xml-crypto verify |
+  |                   | checks Audience/Recipient/time |
+  |<-- 302 /profile --| Set-Cookie                     |
 ```
 
-信任关系：SP 启动时抓取 `GET /idp/metadata`，从中导入 IdP 的签名证书，
-配置成 `node-saml` 的 `idpCert`。**SP 全程不接触 IdP 私钥。**
+How trust is established: at startup the SP fetches `GET /idp/metadata` and imports the
+IdP's signing certificate as node-saml's `idpCert`. **The SP never touches the IdP
+private key.**
 
-### 篡改测试
+### Tampering
 
-IdP 登录页上有一个「模拟中间人」勾选框。勾上之后，IdP 会在签名完成之后把
-`role` 改成 `administrator`，再交给浏览器 POST 给 SP。SP 的 ACS 会返回
-`Invalid signature`，会话不会建立。
+The IdP login page has a "simulate a man-in-the-middle" checkbox. With it ticked, the
+IdP rewrites `role` to `administrator` *after* signing, then hands the result to the
+browser to POST. The SP's ACS answers `Invalid signature` and opens no session.
 
-## 测试
+## Tests
 
 ```bash
-npm test           # 全部 38 个用例
-npm run test:unit  # domain 与 use case，27 个，不需要 HTTP 和密钥
-npm run test:e2e   # 端到端，11 个，真实启动两个服务
+npm test           # all 38 cases
+npm run test:unit  # models and services, 27 cases, no HTTP or keys needed
+npm run test:e2e   # end to end, 11 cases, boots both services for real
 ```
 
-用 Node 内置的 `node:test`，没有额外依赖。
+Everything runs on Node's built-in `node:test` — no test framework dependency.
 
-端到端测试复用 `src/bootstrap.js` 启动服务，用带 Cookie 的 `fetch` 扮演浏览器，
-逐跳断言整条链路，并覆盖两条拒绝路径：中间人篡改（`Invalid signature`）和
-重放同一份 SAMLResponse（`InResponseTo is not valid`）。它跑在 14000/15000 端口，
-所以开着 `npm start` 也能执行。
+The end-to-end suite reuses `src/bootstrap.js` to start the services and drives them
+with a cookie-keeping `fetch` acting as a browser, asserting each hop. It also covers
+two rejection paths: man-in-the-middle tampering (`Invalid signature`) and replaying
+the same SAMLResponse (`InResponseTo is not valid`). It listens on ports 14000/15000,
+so it can run while `npm start` is up.
 
-## 离线版
-
-```bash
-npm run demo
-```
-
-不启动 HTTP 服务，也不发送请求，在一个进程里直接调用两个库的方法。适合先看清
-「哪一层在做签名，哪一层在做协议校验」。阅读顺序见 `demo.js` 的 `main()`。
-
-## 两个库的职责
+## What the two libraries do
 
 ### `xml-crypto`
 
-底层 XML 数字签名：Canonicalization、Digest、RSA 签名与验签，
-以及 `getSignedReferences()`——只有它返回的内容才是签名真正保护的 XML。
+Low-level XML digital signatures: canonicalization, digests, RSA signing and
+verification — plus `getSignedReferences()`, which returns the only XML the signature
+actually covers.
 
 ### `@node-saml/node-saml`
 
-完整的 SAML 协议：生成 AuthnRequest、Base64 解码 SAMLResponse、内部调用
-`xml-crypto` 验签，再校验 Audience、Recipient、InResponseTo、NotBefore /
-NotOnOrAfter，最后返回用户 Profile。
+The SAML protocol proper: building the AuthnRequest, base64-decoding the SAMLResponse,
+calling `xml-crypto` internally to verify, then checking Audience, Recipient,
+InResponseTo, and NotBefore / NotOnOrAfter before returning a user profile.
 
-一句话：**`xml-crypto` 证明这段 XML 没被改过；`node-saml` 证明这份登录结果
-是发给我们的、现在有效、来自我们信任的 IdP。**
+In one sentence: **`xml-crypto` proves this XML was not modified; `node-saml` proves
+this login result is meant for us, is valid right now, and came from the IdP we trust.**
 
-## 目录结构
+## Layout
+
+IdP and SP are two independent projects that never import each other — they cooperate
+over HTTP alone. Inside each, files are grouped by technical layer.
 
 ```text
-IdP 与 SP 是两个互相独立的项目，各自再按技术分层。它们只通过 HTTP 打交道，
-不 import 对方的任何文件。
+docs/design/saml-sso-http.md  design doc: boundaries, dependency direction, test strategy
+src/config.js                 derives every entity ID and URL from the two ports
+src/bootstrap.js              composition root: start the IdP, then let the SP import its metadata
+src/server.js                 CLI entry point; prints the banner
 
-```text
-docs/design/saml-sso-http.md  设计文档：边界、依赖方向、测试策略
-src/config.js                 由端口推导出两端的 Entity ID、地址、有效期
-src/bootstrap.js              组装根：先起 IdP，再让 SP 导入 metadata
-src/server.js                 命令行入口，打印启动信息
-
-src/identity-provider/        ← Demo OpenAM，独立项目
-├── models/                   用户目录、SP 注册表、SAMLResponse 与 metadata 构造
-├── services/                 签发用例、xml-crypto 签名、AuthnRequest 解析
+src/identity-provider/        Demo OpenAM
+├── models/                   user directory, SP registry, SAMLResponse and metadata factories
+├── services/                 issuing use case, xml-crypto signer, AuthnRequest parser
 ├── controllers/              idp.controller.js
 ├── presenters/               idp.presenter.js
-├── views/                    login.ejs、auto-post.ejs
-└── app.js                    本项目的装配点
+├── views/                    login.ejs, auto-post.ejs
+└── app.js                    this project's wiring point
 
-src/service-provider/         ← JSL-online，独立项目
+src/service-provider/         JSL-online
 ├── models/                   authenticated-user.js
-├── services/                 SSO 发起与完成用例、node-saml、会话、metadata 抓取
+├── services/                 start/complete SSO use cases, node-saml, sessions, metadata client
 ├── controllers/              sp.controller.js
 ├── presenters/               sp.presenter.js
-├── views/                    home.ejs、profile.ejs
-└── app.js                    本项目的装配点
+├── views/                    home.ejs, profile.ejs
+└── app.js                    this project's wiring point
 
-src/shared/                   两边共用的通用部分
-├── utils/                    时钟、SAML ID、X.509、模板引擎、错误处理
-├── views/                    公共 layout：_head.ejs、_foot.ejs
-└── public/demo.css           样式表
+src/shared/                   what both projects share
+├── utils/                    clock, SAML ID, X.509, template engine, error handling
+├── views/                    common layout: _head.ejs, _foot.ejs
+└── public/demo.css           stylesheet
 
-tests/identity-provider/      与 src 同构
+tests/identity-provider/      mirrors src
 tests/service-provider/
-tests/e2e/                    端到端测试
-demo.js                       离线版
+tests/e2e/                    end-to-end suite
 ```
 
-在每个项目内部，一份文件属于哪一层，看它「因为什么原因才需要改」：
+Inside a project, which layer a file belongs to is decided by *what makes it change*:
 
-| 目录 | 改动原因 |
+| Directory | Reason to change |
 | --- | --- |
-| `models/` | 业务规则变了 |
-| `services/` | 流程变了，或换了外部库、存储 |
-| `controllers/` | 接口协议变了 |
-| `presenters/` `views/` | 页面展示变了 |
-| `app.js` | 换实现（比如内存会话换成 Redis） |
+| `models/` | a business rule changed |
+| `services/` | a workflow changed, or an external library or store was swapped |
+| `controllers/` | the wire protocol changed |
+| `presenters/`, `views/` | the page output changed |
+| `app.js` | an implementation was swapped (in-memory sessions for Redis, say) |
 
-HTML 全部在各项目的 `views/*.ejs` 里，presenter 只负责挑模板和准备数据
-（`{ view, model }`），controller 通过 `shared/utils/render-view.js` 渲染，
-因此业务代码里没有 HTML 字符串。每个页面以 `include("_head", { title })` 开头、
-`include("_foot")` 结尾，公共 layout 与样式表放在 `src/shared/`。
+No HTML or CSS lives in JavaScript. Markup sits in each project's `views/*.ejs`, a
+presenter only picks a template and prepares its data (`{ view, model }`), and the
+controller renders through `shared/utils/render-view.js`. Every page opens with
+`include("_head", { title })` and closes with `include("_foot")`.
 
-## 生产环境的差异
+## How production differs
 
-- IdP 私钥由企业 PKI 签发并长期保存；本 Demo 每次启动临时生成。
-- AuthnRequest 上下文应放在 IdP 会话里；本 Demo 用隐藏表单字段。
-- 会话应放在 Redis 或数据库；本 Demo 用进程内 Map。
-- `tampering.simulator.js` 是演示用的攻击模拟，生产代码中不应存在。
+- The IdP private key and certificate come from a corporate PKI and are long-lived;
+  this demo mints a throwaway pair on every start.
+- The AuthnRequest context belongs in the IdP's own session; this demo passes it in
+  hidden form fields.
+- Sessions belong in Redis or a database; this demo keeps them in an in-process Map.
+- `tampering.simulator.js` is an attack simulation for teaching purposes and has no
+  place in production code.

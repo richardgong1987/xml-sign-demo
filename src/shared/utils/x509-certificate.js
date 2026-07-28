@@ -2,7 +2,8 @@ const PEM_HEADERS = /-----(BEGIN|END) CERTIFICATE-----/g;
 const BASE64_LINE_LENGTH = 64;
 
 /*
- * SAML metadata 的 <ds:X509Certificate> 里放的是去掉 PEM 头尾和换行的 Base64 正文。
+ * <ds:X509Certificate> in SAML metadata carries the base64 body alone —
+ * no PEM header, footer, or line breaks.
  */
 export function toCertificateBody(certificatePem) {
     return certificatePem.replace(PEM_HEADERS, "").replace(/\s+/g, "");
@@ -18,4 +19,3 @@ export function toCertificatePem(certificateBody) {
         "",
     ].join("\n");
 }
-

@@ -7,10 +7,10 @@
  */
 
 /**
- * SP 发起 Single Sign-On：生成 AuthnRequest，并把用户送到 IdP。
+ * The SP starts single sign-on: it builds an AuthnRequest and sends the user to the IdP.
  *
- * 用户登录后想回到的页面放在 RelayState 里。RelayState 对 IdP 是不透明的，
- * IdP 只负责原样带回来。
+ * The page the user wanted before signing in travels in RelayState. RelayState is
+ * opaque to the IdP, which only echoes it back unchanged.
  */
 export class StartSingleSignOnUseCase {
     #samlGateway;
@@ -22,10 +22,9 @@ export class StartSingleSignOnUseCase {
 
     /**
      * @param {{ returnTo: string }} command
-     * @returns {Promise<string>} IdP 的登录地址
+     * @returns {Promise<string>} the IdP sign-in URL
      */
     async execute(command) {
         return this.#samlGateway.createLoginRedirectUrl(command.returnTo);
     }
 }
-

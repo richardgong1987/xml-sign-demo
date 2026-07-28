@@ -13,7 +13,8 @@ import { createUnsignedSamlResponse } from "../models/saml-response.factory.js";
  */
 
 /**
- * 用户在 IdP 完成认证后，IdP 为指定的 SP 签发一份已签名的 SAMLResponse。
+ * Once a user has authenticated at the IdP, the IdP issues a signed SAMLResponse
+ * for the requesting service provider.
  */
 export class IssueSamlResponseUseCase {
     #identityProvider;

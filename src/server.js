@@ -4,15 +4,16 @@ import { DEFAULT_PORTS } from "./config.js";
 import { startSamlDemo } from "./bootstrap.js";
 
 /*
- * ESM 支持顶层 await，因此不需要再包一层 main()。
- * 启动失败时抛出的错误由 Node 打印并以非零码退出。
+ * ESM supports top-level await, so there is no main() wrapper. A startup failure
+ * propagates as an unhandled rejection: Node prints it and exits non-zero.
  */
 const demo = await startSamlDemo(readPortsFromCommandLine());
 
 console.log(renderStartupBanner(demo));
 
 /*
- * 端口在 config 里本来就是参数，顺手用 node:util 的 parseArgs 暴露到命令行：
+ * Ports are already a parameter in config.js, so node:util's parseArgs simply
+ * exposes them on the command line:
  *   npm start -- --idp-port 4001 --sp-port 5001
  */
 function readPortsFromCommandLine() {
@@ -34,20 +35,20 @@ function renderStartupBanner({ identityProviderConfig, serviceProviderConfig, id
     const spBaseUrl = `http://localhost:${serviceProviderConfig.port}`;
 
     return [
-        heading("IdP（Demo OpenAM）", idpBaseUrl),
-        route("GET ", "/idp/metadata", "IdP metadata（含签名证书）"),
-        route("GET ", "/idp/sso", "接收 AuthnRequest，显示登录页"),
-        route("POST", "/idp/login", "签发已签名的 SAMLResponse"),
+        heading("IdP (Demo OpenAM)", idpBaseUrl),
+        route("GET ", "/idp/metadata", "IdP metadata, including the signing certificate"),
+        route("GET ", "/idp/sso", "receives the AuthnRequest, shows the login page"),
+        route("POST", "/idp/login", "issues a signed SAMLResponse"),
         "",
-        heading("SP（JSL-online）", spBaseUrl),
-        route("GET ", "/login", "发起 SSO"),
+        heading("SP (JSL-online)", spBaseUrl),
+        route("GET ", "/login", "starts SSO"),
         route("GET ", "/api/saml/metadata", "SP metadata"),
-        route("POST", "/api/saml/acs", "校验 SAMLResponse 并建立会话"),
-        route("GET ", "/profile", "显示已登录用户"),
+        route("POST", "/api/saml/acs", "validates the SAMLResponse, opens a session"),
+        route("GET ", "/profile", "shows the signed-in user"),
         "",
-        `SP 已从 ${identityProvider.entityId} 导入 IdP 签名证书。`,
+        `The SP imported the IdP signing certificate from ${identityProvider.entityId}`,
         "",
-        `打开 ${styleText(["cyan", "underline"], spBaseUrl)} 开始。`,
+        `Open ${styleText(["cyan", "underline"], spBaseUrl)} to start.`,
     ].join("\n");
 }
 

@@ -1,15 +1,15 @@
-<%- include("_head", { title: "JSL-online（SP）" }) %>
+<%- include("_head", { title: "JSL-online (SP)" }) %>
 
-<h1>JSL-online（SP）</h1>
+<h1>JSL-online (SP)</h1>
 
-<p>当前未登录。</p>
+<p>Not signed in.</p>
 
-<p><a href="/login">通过 Demo OpenAM 登录</a></p>
+<p><a href="/login">Sign in through Demo OpenAM</a></p>
 
-<h2>SP 对外暴露的 SAML 接口</h2>
+<h2>SAML endpoints this SP exposes</h2>
 <ul>
-    <li><code>GET /api/saml/metadata</code>：SP metadata，交给 IdP 注册</li>
-    <li><code>POST /api/saml/acs</code>：接收 IdP 投递的 SAMLResponse</li>
+    <li><code>GET /api/saml/metadata</code> — SP metadata, to be registered with the IdP</li>
+    <li><code>POST /api/saml/acs</code> — receives the SAMLResponse delivered by the IdP</li>
 </ul>
 
 <%- include("_foot") %>

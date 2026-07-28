@@ -5,12 +5,12 @@ import { createServiceProviderApp } from "./service-provider/app.js";
 import { fetchIdentityProviderMetadata } from "./service-provider/services/idp-metadata.client.js";
 
 /**
- * 组装根：启动 IdP 与 SP 两个项目。
+ * Composition root: starts both projects.
  *
- * 顺序本身就是 SAML 的信任建立顺序：
- *   IdP 先持有私钥并公布 metadata，SP 才能从 metadata 里导入证书。
+ * The order is the trust-establishment order itself: the IdP must hold its private
+ * key and publish its metadata before the SP can import the certificate from it.
  *
- * 端到端测试复用这个函数，测的就是真实的装配结果。
+ * The end-to-end suite reuses this function, so it exercises the real wiring.
  *
  * @param {{ identityProviderPort: number, serviceProviderPort: number }} ports
  */
@@ -53,4 +53,3 @@ function listen(app, port) {
 function close(server) {
     return new Promise((resolve) => server.close(resolve));
 }
-

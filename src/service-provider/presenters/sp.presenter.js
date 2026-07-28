@@ -1,6 +1,6 @@
 /*
- * Presenter 只回答两件事：用哪个模板，模板需要哪些数据。
- * HTML 在 views/ 下的 EJS 模板里，转义由 EJS 的 <%= %> 负责。
+ * A presenter answers two questions only: which template, and what data it needs.
+ * The HTML lives in the EJS templates under views/, and EJS's <%= %> does the escaping.
  */
 
 const PROFILE_FIELDS = Object.freeze([

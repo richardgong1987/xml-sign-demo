@@ -1,10 +1,11 @@
 import { createSamlId } from "../../shared/utils/saml-id.js";
 
 /**
- * 构造一份尚未签名的 SAMLResponse。
+ * Builds an unsigned SAMLResponse.
  *
- * 纯函数：不读时间、不读配置、不碰网络。时间由调用方通过 issuedAt 注入，
- * 因此可以对有效期规则写确定性的测试。
+ * Pure function: it reads no clock, no configuration, and no network. The caller
+ * injects the time through issuedAt, which is what makes the validity-window rules
+ * deterministically testable.
  *
  * @param {{
  *   identityProviderEntityId: string,

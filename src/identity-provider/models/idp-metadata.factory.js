@@ -1,10 +1,11 @@
 import { toCertificateBody } from "../../shared/utils/x509-certificate.js";
 
 /**
- * IdP 对外公布的 metadata。
+ * The metadata document the IdP publishes.
  *
- * 这是 IdP 与 SP 之间建立信任的唯一入口：SP 从这里拿到 SSO 地址和签名证书，
- * 而私钥永远留在 IdP 一侧。
+ * This is the single channel through which trust is established between IdP and SP:
+ * the SP learns the SSO endpoint and the signing certificate here, while the private
+ * key never leaves the IdP.
  *
  * @param {{ entityId: string, singleSignOnUrl: string, certificatePem: string }} params
  * @returns {string}

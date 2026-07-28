@@ -6,7 +6,7 @@ import {
 } from "../../../src/service-provider/services/start-single-sign-on.js";
 
 /*
- * 假的 SamlGatewayPort：记录 RelayState，不生成真正的 AuthnRequest。
+ * Fake SamlGatewayPort: records the RelayState and builds no real AuthnRequest.
  */
 function createRecordingSamlGateway() {
     const relayStates = [];
@@ -20,7 +20,7 @@ function createRecordingSamlGateway() {
     };
 }
 
-test("把 returnTo 作为 RelayState 交给 IdP", async () => {
+test("hands returnTo to the IdP as RelayState", async () => {
     const samlGateway = createRecordingSamlGateway();
     const useCase = new StartSingleSignOnUseCase({ samlGateway });
 

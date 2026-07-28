@@ -1,6 +1,6 @@
 /**
- * 极简浏览器：保存 Cookie，但不自动跟随重定向，
- * 于是 SSO 过程中的每一次跳转都能被单独断言。
+ * A minimal browser: it keeps cookies but never follows redirects automatically,
+ * so every hop of the SSO flow can be asserted on its own.
  */
 export function createBrowser() {
     const cookies = new Map();
@@ -29,7 +29,7 @@ export function createBrowser() {
         for (const setCookie of response.headers.getSetCookie()) {
             const [name, value] = splitCookiePair(setCookie);
 
-            // 清除 Cookie 的响应把值置空，这里跟着删掉。
+            // A cookie-clearing response sends an empty value; drop it here too.
             if (value === "") {
                 cookies.delete(name);
             } else {
@@ -75,13 +75,13 @@ export function readFormAction(html, formId) {
     const match = html.match(new RegExp(`<form id="${RegExp.escape(formId)}"[^>]*action="([^"]*)"`));
 
     if (!match) {
-        throw new Error(`页面里找不到 id="${formId}" 的表单`);
+        throw new Error(`No form with id="${formId}" on the page`);
     }
 
     return decodeHtmlEntities(match[1]);
 }
 
-// EJS 的 <%= %> 会把 " 转成 &#34;、' 转成 &#39;。
+// EJS's <%= %> encodes " as &#34; and ' as &#39;.
 function decodeHtmlEntities(value) {
     return value
         .replace(/&lt;/g, "<")

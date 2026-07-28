@@ -33,13 +33,13 @@ function readText(samlResponseXml, expression) {
     return xpath.select(`string(${expression})`, document);
 }
 
-test("Audience 是目标 SP 的 Entity ID", () => {
+test("sets Audience to the target SP's entity ID", () => {
     const samlResponse = buildSamlResponse();
 
     assert.equal(readText(samlResponse, "//*[local-name(.)='Audience']"), SERVICE_PROVIDER.entityId);
 });
 
-test("Destination 和 Recipient 都指向 SP 的 ACS 地址", () => {
+test("points both Destination and Recipient at the SP's ACS URL", () => {
     const samlResponse = buildSamlResponse();
 
     assert.equal(
@@ -52,7 +52,7 @@ test("Destination 和 Recipient 都指向 SP 的 ACS 地址", () => {
     );
 });
 
-test("有效期从 issuedAt 起算，NotBefore 按约定的时钟偏差提前", () => {
+test("derives the validity window from issuedAt, moving NotBefore back by the accepted clock skew", () => {
     const samlResponse = buildSamlResponse();
     const conditions = "//*[local-name(.)='Conditions']";
 
@@ -60,7 +60,7 @@ test("有效期从 issuedAt 起算，NotBefore 按约定的时钟偏差提前", 
     assert.equal(readText(samlResponse, `${conditions}/@NotOnOrAfter`), "2026-07-28T09:05:00.000Z");
 });
 
-test("把 AuthnRequest 的 ID 回填到 Response 与 SubjectConfirmationData", () => {
+test("echoes the AuthnRequest ID into Response and SubjectConfirmationData", () => {
     const samlResponse = buildSamlResponse({ authnRequestId: "_authn-request-42" });
 
     assert.equal(
@@ -73,7 +73,7 @@ test("把 AuthnRequest 的 ID 回填到 Response 与 SubjectConfirmationData", (
     );
 });
 
-test("NameID 与用户属性来自传入的用户", () => {
+test("takes NameID and the attributes from the given user", () => {
     const samlResponse = buildSamlResponse({
         user: { uid: "sakura", email: "sakura@example.test", role: "auditor" },
     });
@@ -84,7 +84,7 @@ test("NameID 与用户属性来自传入的用户", () => {
     assert.equal(readAttribute(samlResponse, "role"), "auditor");
 });
 
-test("状态码是 Success", () => {
+test("reports a Success status code", () => {
     const samlResponse = buildSamlResponse();
 
     assert.equal(
@@ -93,7 +93,7 @@ test("状态码是 Success", () => {
     );
 });
 
-test("每次签发都使用新的 Response ID 与 Assertion ID", () => {
+test("uses fresh Response and Assertion IDs on every issue", () => {
     const responseIdPath = "/*[local-name(.)='Response']/@ID";
     const assertionIdPath = "//*[local-name(.)='Assertion']/@ID";
 

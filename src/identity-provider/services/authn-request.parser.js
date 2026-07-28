@@ -4,18 +4,19 @@ import xpath from "xpath";
 
 export class InvalidAuthnRequestError extends Error {
     constructor(reason, options) {
-        super(`AuthnRequest 无法解析：${reason}`, options);
+        super(`Cannot parse the AuthnRequest: ${reason}`, options);
         this.name = "InvalidAuthnRequestError";
     }
 }
 
 /**
- * 把 HTTP-Redirect 绑定的 SAMLRequest 参数翻译成内部模型。
+ * Translates the SAMLRequest parameter of the HTTP-Redirect binding into an
+ * internal model.
  *
- * 传输格式：SAMLRequest = base64(raw deflate(AuthnRequest XML))
+ * Wire format: SAMLRequest = base64(raw deflate(AuthnRequest XML))
  *
- * 这是 adapter：只负责协议解码，不做任何业务判断。
- * “这个 SP 能不能登录”由 ServiceProviderRegistry 回答。
+ * This is an adapter: it decodes the protocol and makes no business decision.
+ * Whether that SP is allowed to log in is answered by the ServiceProviderRegistry.
  *
  * @param {string} samlRequestParam
  * @returns {{ requestId: string, serviceProviderEntityId: string }}
@@ -31,7 +32,7 @@ export function parseRedirectBindingAuthnRequest(samlRequestParam) {
     );
 
     if (!requestId || !serviceProviderEntityId) {
-        throw new InvalidAuthnRequestError("缺少 ID 或 Issuer");
+        throw new InvalidAuthnRequestError("ID or Issuer is missing");
     }
 
     return Object.freeze({ requestId, serviceProviderEntityId });
@@ -39,14 +40,14 @@ export function parseRedirectBindingAuthnRequest(samlRequestParam) {
 
 function inflateAuthnRequest(samlRequestParam) {
     if (!samlRequestParam) {
-        throw new InvalidAuthnRequestError("缺少 SAMLRequest 参数");
+        throw new InvalidAuthnRequestError("the SAMLRequest parameter is missing");
     }
 
     try {
         return zlib.inflateRawSync(Buffer.from(samlRequestParam, "base64")).toString("utf8");
     } catch (error) {
-        // 用 cause 挂住底层错误，日志里能看到完整链路，而不是只剩一句拼接的文案。
-        throw new InvalidAuthnRequestError("Base64 或 Deflate 解码失败", { cause: error });
+        // Attach the underlying failure as a cause so the log shows the whole chain
+        // instead of a single hand-concatenated sentence.
+        throw new InvalidAuthnRequestError("base64 or deflate decoding failed", { cause: error });
     }
 }
-
