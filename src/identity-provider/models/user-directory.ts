@@ -21,7 +21,7 @@ export class UnknownUserError extends Error {
  * member such as "toString" or "constructor".
  */
 const DEMO_USERS: readonly DirectoryUser[] = Object.freeze([
-    Object.freeze({uid: "xh-gong", email: "xh-gong@nomura-am.co.jp", role: "developer"}),
+    Object.freeze({uid: "xh-gong", email: "xh-demo@example.com.jp", role: "developer"}),
 ]);
 
 @Injectable()
