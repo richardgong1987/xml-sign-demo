@@ -9,6 +9,8 @@ export interface ServiceProviderConfig {
     readonly assertionConsumerServiceUrl: string;
     readonly identityProviderMetadataUrl: string;
     readonly acceptedClockSkewMs: number;
+    /** Also the entire lifetime of a sign-in: a JWT cannot be revoked before it expires. */
+    readonly accessTokenLifetimeSeconds: number;
 }
 
 /*
@@ -37,5 +39,6 @@ export function createServiceProviderConfig(options: ServiceProviderOptions): Se
         identityProviderMetadataUrl: `${options.identityProviderBaseUrl}/idp/metadata`,
 
         acceptedClockSkewMs: 5_000,
+        accessTokenLifetimeSeconds: 15 * 60,
     });
 }

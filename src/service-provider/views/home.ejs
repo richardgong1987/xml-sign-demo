@@ -2,7 +2,7 @@
 
 <h1>JSL-online (SP)</h1>
 
-<p>Not signed in.</p>
+<p id="status">Not signed in.</p>
 
 <p><a href="/login">Sign in through Demo OpenAM</a></p>
 
@@ -11,5 +11,19 @@
     <li><code>GET /api/saml/metadata</code> — SP metadata, to be registered with the IdP</li>
     <li><code>POST /api/saml/acs</code> — receives the SAMLResponse delivered by the IdP</li>
 </ul>
+
+<h2>Its own API</h2>
+<ul>
+    <li><code>GET /api/me</code> — requires <code>Authorization: Bearer &lt;jwt&gt;</code></li>
+</ul>
+
+<script>
+    // Whether a token is present says nothing about whether it is still valid; only
+    // /api/me can answer that. This is just a hint on the landing page.
+    if (localStorage.getItem("sp_access_token")) {
+        document.getElementById("status").textContent =
+            "An access token is present — open /profile to have it verified.";
+    }
+</script>
 
 <%- include("_foot") %>

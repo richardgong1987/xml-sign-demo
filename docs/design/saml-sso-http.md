@@ -13,7 +13,7 @@ can watch a complete SP-initiated single sign-on happen in a browser.
 ## 2. Use Case
 
 - IdP: `Once a user has authenticated, the IdP issues a signed SAMLResponse for the requesting SP.`
-- SP: `The SP validates the SAMLResponse the IdP issued and opens a local session for the user it describes.`
+- SP: `The SP validates the SAMLResponse the IdP issued and mints its own access token for the user it describes.`
 
 ## 3. Input Model
 
@@ -32,7 +32,7 @@ models at the adapter layer and never reaches a use case unchanged.
 | --- | --- |
 | `IssueSamlResponseUseCase` | `{ assertionConsumerServiceUrl, samlResponse }` |
 | `StartSingleSignOnUseCase` | the IdP sign-in URL (string) |
-| `CompleteSingleSignOnUseCase` | `{ sessionId, returnTo }` |
+| `CompleteSingleSignOnUseCase` | `{ accessToken, returnTo }` |
 
 ## 5. Domain Rules
 
@@ -49,7 +49,8 @@ SP side:
 - Only assertions signed by the configured IdP certificate are accepted.
 - RelayState must be a local path; anything else falls back to the default landing
   page (open-redirect protection).
-- Only a validated user gets a session.
+- Only a validated user gets an access token, and that token is the whole sign-in: a
+  valid signature and a live expiry mean signed in, anything else means not signed in.
 
 ## 6. Application Flow
 
@@ -71,8 +72,10 @@ Browser           SP (:3000)                      IdP (:4000)
   |------------------>| CompleteSingleSignOnUseCase    |
   |                   |   |- node-saml -> xml-crypto verify
   |                   |   |- check Audience/Recipient/validity/InResponseTo
-  |                   |   '- open a session, Set-Cookie
-  |<-- 302 /profile --|                                |
+  |                   |   '- sign the SP's own JWT
+  |<-- hand-off page -| script stores it in localStorage
+  |  GET /api/me  Authorization: Bearer <jwt>          |
+  |------------------>| BearerTokenGuard verifies it   |
 ```
 
 Establishing trust: while its module initialises the SP fetches `GET /idp/metadata` and
@@ -103,7 +106,7 @@ src/identity-provider/          src/service-provider/
 │   issue-saml-response (UC)    │   start-single-sign-on (UC)
 │   xml-crypto-assertion-signer │   complete-single-sign-on (UC)
 │   authn-request.parser        │   node-saml.gateway
-│   signing-credential          │   in-memory-session-store
+│   signing-credential          │   jwt-access-token.issuer
 │   tampering.simulator         │   idp-metadata.client
 ├── controllers/                ├── controllers/
 ├── presenters/                 ├── presenters/
@@ -121,7 +124,7 @@ port, because neither owns it.
 Nothing in `src/` starts both applications. The end-to-end suite needs them together,
 so that orchestration lives in `test/start-both-applications.ts` and nowhere else.
 
-Ports are abstract classes (`Clock`, `AssertionSigner`, `SamlGateway`, `SessionStore`).
+Ports are abstract classes (`Clock`, `AssertionSigner`, `SamlGateway`, `AccessTokenIssuer`).
 They survive compilation, so they double as injection tokens, and a use case can depend
 on the abstraction while only the module names an implementation. Values that have no
 class to hang off — configuration objects, the metadata string — use symbol tokens,
@@ -155,7 +158,7 @@ also be written to `app.locals.views` for EJS to see it when resolving includes.
 ```text
 controller -> use case -> model
 controller -> presenter
-use case   -> port (AssertionSignerPort / ClockPort / SamlGatewayPort / SessionStorePort)
+use case   -> port (AssertionSigner / Clock / SamlGateway / AccessTokenIssuer)
 adapter    -> port implementation
 ```
 
@@ -165,18 +168,19 @@ adapter files under `services/`, in `controllers/`, and in the module files.
 
 ## 9. External Details
 
-- `@nestjs/core` / `@nestjs/platform-express` / `cookie-parser`: HTTP transport and DI.
+- `@nestjs/core` / `@nestjs/platform-express`: HTTP transport and DI.
 - `ejs`: page templates.
 - `xml-crypto`: XML canonicalization, digests, RSA signing and verification.
 - `@node-saml/node-saml`: AuthnRequest generation, SAMLResponse validation, SP metadata.
 - `selfsigned`: mints the IdP's self-signed X.509 certificate at startup.
-- Session storage: an in-process Map.
+- `@nestjs/jwt`: signs and verifies the SP's own access tokens (HS256).
+- Sign-in state: none on the server; the browser holds a JWT in localStorage.
 - Runtime: Node.js >= 24, ES Modules (`"type": "module"`), `import.meta.dirname` for
   path resolution.
 
 ## 10. Test Strategy
 
-`npm test` runs both layers in one go: 54 cases on Jest with `ts-jest`.
+`npm test` runs both layers in one go: 64 cases on Jest with `ts-jest`.
 
 Unit specs sit next to the code they cover (`src/**/*.spec.ts`) and need no HTTP, keys,
 or database. Those covering a Nest provider build their subject with
@@ -195,13 +199,16 @@ binds real implementations to:
 - `IssueSamlResponseUseCase`: with a fake `AssertionSigner` and a fixed `Clock`,
   asserts the delivery address comes from the registry, the time comes from the
   injected clock, and invalid input never reaches the signing step.
-- `CompleteSingleSignOnUseCase`: with a fake `SamlGateway` and `SessionStore`, asserts
-  the RelayState off-site fallback and that a failed validation opens no session.
+- `CompleteSingleSignOnUseCase`: with a fake `SamlGateway` and `AccessTokenIssuer`,
+  asserts the RelayState off-site fallback and that a failed validation mints no token.
+- `JwtAccessTokenIssuer`: round-trips the identity, and refuses a token signed with a
+  different secret, edited after signing, or past its expiry.
 
 End to end (`test/single-sign-on.e2e-spec.ts`) calls `startSamlDemo()` to boot both Nest
 applications for real and drives them with a cookie-keeping `fetch` acting as a browser,
 asserting each hop: metadata exchange, AuthnRequest generation and parsing, issuing and
-delivery, session creation, RelayState redirect, sign-out, plus three rejection paths
+delivery, token hand-off, `/api/me` with and without a valid bearer token, plus the
+rejection paths
 (man-in-the-middle tampering -> `Invalid signature`; replay -> `InResponseTo is not
 valid`; malformed AuthnRequest -> 400).
 
@@ -211,11 +218,31 @@ One Jest caveat worth knowing: its `node` environment isolates realms, so an err
 raised inside a Node core module is not `instanceof Error` in a spec. Assertions about a
 preserved `cause` check its shape rather than its constructor.
 
+### Sign-in state
+
+The SP holds no session. Once the assertion validates, `CompleteSingleSignOnUseCase`
+asks the `AccessTokenIssuer` port for a token and the ACS renders a hand-off page: the
+IdP POSTed from its own origin, so only a script on the SP origin can write to the SP's
+localStorage. Every later call carries `Authorization: Bearer <jwt>`, and
+`BearerTokenGuard` answers the only question that matters — does the signature verify
+and is the token still live.
+
+The algorithm is pinned on both sides (`signOptions.algorithm` and
+`verifyOptions.algorithms`). Accepting whatever the token's own header claims is the
+classic JWT confusion bug.
+
 ## 11. Risks and Trade-offs
 
 - The IdP carries AuthnRequest context between `/idp/sso` and `/idp/login` in hidden
   form fields. Production should keep it in the IdP's own session so the user cannot
   rewrite it.
+- Keeping the token in localStorage means any XSS on the SP can read it, and nothing can
+  revoke it before `exp` — signing out only clears the browser's copy. An end-to-end
+  test asserts that a captured token still works after sign-out, so the property stays
+  visible rather than forgotten. An `httpOnly`, `SameSite` cookie is stronger; the usual
+  production answer is short-lived tokens plus refresh, or a server-side session.
+- The JWT secret is minted on every start, so a restart invalidates every token still in
+  a browser. Production reads a stable secret from a secret manager.
 - The IdP private key and certificate are regenerated on every start, so assertions
   issued before a restart stop verifying. Production uses PKI-issued, long-lived material.
 - Sessions live in memory: lost on restart, and not deployable across instances.

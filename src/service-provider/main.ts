@@ -1,6 +1,5 @@
 import path from "node:path";
 import {parseArgs, styleText} from "node:util";
-import cookieParser from "cookie-parser";
 
 import {createWebApplication} from "../shared/create-web-application";
 import {
@@ -10,6 +9,7 @@ import {
     createServiceProviderConfig,
 } from "./service-provider.config";
 import {ServiceProviderModule} from "./service-provider.module";
+import {createDemoAccessTokenSecret} from "./services/demo-access-token-secret";
 
 /**
  * JSL-online, started on its own.
@@ -23,12 +23,12 @@ import {ServiceProviderModule} from "./service-provider.module";
  */
 async function main(): Promise<void> {
     const config = createServiceProviderConfig(readOptionsFromCommandLine());
+    const accessTokenSecret = createDemoAccessTokenSecret();
 
     const app = await createWebApplication({
-        module: ServiceProviderModule.register(config),
+        module: ServiceProviderModule.register({config, accessTokenSecret}),
         viewsDir: path.join(__dirname, "views"),
         serviceName: "SP",
-        configure: (application) => application.use(cookieParser()),
     });
 
     await app.listen(config.port);
@@ -58,7 +58,8 @@ function renderStartupBanner(config: ServiceProviderConfig): string {
         route("GET ", "/login", "starts SSO"),
         route("GET ", "/api/saml/metadata", "SP metadata"),
         route("POST", "/api/saml/acs", "validates the SAMLResponse, opens a session"),
-        route("GET ", "/profile", "shows the signed-in user"),
+        route("GET ", "/profile", "shell page; its script verifies the token"),
+        route("GET ", "/api/me", "requires Authorization: Bearer <jwt>"),
         "",
         `Signing certificate imported from ${styleText("dim", config.identityProviderMetadataUrl)}`,
         "",

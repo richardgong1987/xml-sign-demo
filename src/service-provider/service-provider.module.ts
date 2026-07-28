@@ -1,13 +1,21 @@
 import {DynamicModule, Module} from "@nestjs/common";
+import {JwtModule} from "@nestjs/jwt";
 
 import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "./service-provider.config";
+import {BearerTokenGuard} from "./controllers/bearer-token.guard";
 import {SERVICE_PROVIDER_METADATA, ServiceProviderController,} from "./controllers/service-provider.controller";
+import {AccessTokenIssuer} from "./services/access-token";
 import {fetchIdentityProviderTrust, IDENTITY_PROVIDER_TRUST} from "./services/idp-metadata.client";
+import {JwtAccessTokenIssuer} from "./services/jwt-access-token.issuer";
 import {NodeSamlGateway} from "./services/node-saml.gateway";
 import {SamlGateway} from "./services/saml-gateway";
 import {CompleteSingleSignOnUseCase} from "./services/complete-single-sign-on.use-case";
 import {StartSingleSignOnUseCase} from "./services/start-single-sign-on.use-case";
-import {InMemorySessionStore, SessionStore} from "./services/session-store";
+
+export interface ServiceProviderModuleOptions {
+    readonly config: ServiceProviderConfig;
+    readonly accessTokenSecret: string;
+}
 
 /**
  * JSL-online as a Nest module.
@@ -18,9 +26,18 @@ import {InMemorySessionStore, SessionStore} from "./services/session-store";
  */
 @Module({})
 export class ServiceProviderModule {
-    static register(config: ServiceProviderConfig): DynamicModule {
+    static register({config, accessTokenSecret}: ServiceProviderModuleOptions): DynamicModule {
         return {
             module: ServiceProviderModule,
+            imports: [
+                JwtModule.register({
+                    secret: accessTokenSecret,
+                    signOptions: {algorithm: "HS256"},
+                    // Pin the algorithm on the way in as well. Trusting whatever the
+                    // token's own header claims is the classic JWT confusion bug.
+                    verifyOptions: {algorithms: ["HS256"]},
+                }),
+            ],
             controllers: [ServiceProviderController],
             providers: [
                 {provide: SERVICE_PROVIDER_CONFIG, useValue: config},
@@ -31,9 +48,10 @@ export class ServiceProviderModule {
 
                 StartSingleSignOnUseCase,
                 CompleteSingleSignOnUseCase,
+                BearerTokenGuard,
 
                 {provide: SamlGateway, useClass: NodeSamlGateway},
-                {provide: SessionStore, useClass: InMemorySessionStore},
+                {provide: AccessTokenIssuer, useClass: JwtAccessTokenIssuer},
                 {
                     provide: SERVICE_PROVIDER_METADATA,
                     useFactory: (gateway: SamlGateway) => gateway.describeMetadata(),

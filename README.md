@@ -54,8 +54,9 @@ provider it has been told about. `--idp-url` is where the SP goes to fetch trust
 | IdP | `POST /idp/login` | signs a SAMLResponse and auto-POSTs it back to the SP |
 | SP | `GET /login` | builds an AuthnRequest and redirects to the IdP |
 | SP | `GET /api/saml/metadata` | SP metadata, to be registered with the IdP |
-| SP | `POST /api/saml/acs` | validates the SAMLResponse and opens a session |
-| SP | `GET /profile` | shows the signed-in user |
+| SP | `POST /api/saml/acs` | validates the SAMLResponse, issues the SP's own JWT |
+| SP | `GET /profile` | shell page; its script verifies the token |
+| SP | `GET /api/me` | the SP's own API — requires `Authorization: Bearer <jwt>` |
 
 ### The full flow
 
@@ -73,8 +74,33 @@ Browser           SP (:3000)                      IdP (:4000)
   |  POST /api/saml/acs                                |
   |------------------>| node-saml -> xml-crypto verify |
   |                   | checks Audience/Recipient/time |
-  |<-- 302 /profile --| Set-Cookie                     |
+  |                   | signs its own JWT              |
+  |<-- hand-off page -| script: localStorage.setItem() |
+  |  GET /profile     |                                |
+  |------------------>| shell page only                |
+  |  GET /api/me  Authorization: Bearer <jwt>          |
+  |------------------>| verifies signature + expiry    |
+  |<-- 200 JSON ------|                                |
 ```
+
+### Sign-in state
+
+The SP keeps nothing. After the assertion checks out it signs its own JWT (HS256, its
+own secret, 15 minutes) and renders a hand-off page — the IdP POSTed from *its* origin,
+so only a script on the SP origin can reach the SP's localStorage:
+
+```html
+<div id="token-handoff" data-access-token="…" data-return-to="/profile"></div>
+<script>
+    const handoff = document.getElementById("token-handoff").dataset;
+    localStorage.setItem("sp_access_token", handoff.accessToken);
+    location.replace(handoff.returnTo);
+</script>
+```
+
+From then on the page sends the token with every call. A valid signature and a live
+`exp` *is* the sign-in; anything else means not signed in, and the page starts SSO
+again. Signing out just deletes the key — there is nothing on the server to clear.
 
 How trust is established: `ServiceProviderModule` declares the IdP's certificate as an
 **async provider**, so the SP application does not finish initialising until it has
@@ -86,12 +112,12 @@ never touches the IdP private key.**
 
 The IdP login page has a "simulate a man-in-the-middle" checkbox. With it ticked, the
 IdP rewrites `role` to `administrator` *after* signing, then hands the result to the
-browser to POST. The SP's ACS answers `Invalid signature` and opens no session.
+browser to POST. The SP's ACS answers `Invalid signature` and issues no token.
 
 ## Tests
 
 ```bash
-npm test           # all 54 cases
+npm test           # all 64 cases
 npm run test:unit  # models and services only, no HTTP or keys needed
 npm run test:e2e   # end to end, boots both applications for real
 ```
@@ -161,10 +187,10 @@ src/service-provider/         JSL-online — deployable on its own
 ├── main.ts                   entry point: --port, --idp-url
 ├── service-provider.config.ts    its own configuration
 ├── models/                   authenticated-user.ts
-├── services/                 start/complete SSO use cases, node-saml, sessions, metadata client
+├── services/                 start/complete SSO use cases, node-saml, JWT issuer, metadata client
 ├── controllers/
 ├── presenters/
-├── views/                    home.ejs, profile.ejs
+├── views/                    home.ejs, store-token.ejs, profile.ejs
 └── service-provider.module.ts
 
 src/shared/                   web plumbing neither application should reinvent
@@ -191,7 +217,7 @@ Which layer a file belongs to is decided by *what makes it change*:
 | `services/` | a workflow changed, or an external library or store was swapped |
 | `controllers/` | the wire protocol changed |
 | `presenters/`, `views/` | the page output changed |
-| `*.module.ts` | an implementation was swapped (in-memory sessions for Redis, say) |
+| `*.module.ts` | an implementation was swapped (the JWT issuer for an opaque-token one, say) |
 
 Ports are abstract classes, so they survive compilation and double as injection tokens:
 
@@ -209,13 +235,30 @@ No HTML or CSS lives in TypeScript. Markup sits in each application's `views/*.e
 exactly the data that template needs. Every page opens with
 `include("_head", { title })` and closes with `include("_foot")`.
 
+### What this costs
+
+Choosing localStorage over an `httpOnly` cookie is a real trade, and the demo does not
+hide it:
+
+- **Any XSS on the SP reads the token.** An `httpOnly` cookie is unreachable from
+  JavaScript; a localStorage entry is not.
+- **Nothing can be revoked.** A JWT is valid until `exp`. Signing out clears the
+  browser's copy, but a token captured beforehand keeps working — there is an
+  end-to-end test asserting exactly that, so the property stays visible.
+- **CSRF stops being a concern**, since no credential is attached automatically.
+
+The usual production answer is short-lived tokens plus a refresh mechanism, or a
+server-side session after all.
+
 ## How production differs
 
 - The IdP private key and certificate come from a corporate PKI and are long-lived;
   this demo mints a throwaway pair on every start.
 - The AuthnRequest context belongs in the IdP's own session; this demo passes it in
   hidden form fields.
-- Sessions belong in Redis or a database; this demo keeps them in an in-process Map.
+- The JWT secret is minted fresh on every start, so a restart silently invalidates
+  every token still sitting in a browser. Production reads a stable secret from a
+  secret manager.
 - `SamlFailureFilter` returns the rejection reason to the browser so the demo is
   readable. A production SP would show a generic page and keep the detail in the log.
 - `tampering.simulator.ts` is an attack simulation for teaching purposes and has no

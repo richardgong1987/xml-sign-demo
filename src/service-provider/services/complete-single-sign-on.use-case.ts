@@ -1,7 +1,7 @@
 import {Injectable} from "@nestjs/common";
 
+import {AccessTokenIssuer} from "./access-token";
 import {SamlGateway} from "./saml-gateway";
-import {SessionStore} from "./session-store";
 
 const DEFAULT_LANDING_PAGE = "/profile";
 
@@ -11,22 +11,22 @@ export interface CompleteSingleSignOnCommand {
 }
 
 export interface CompletedSingleSignOn {
-    readonly sessionId: string;
+    readonly accessToken: string;
     readonly returnTo: string;
 }
 
 /**
- * The SP validates the SAMLResponse the IdP issued and opens a local session for the
+ * The SP validates the SAMLResponse the IdP issued and mints an access token for the
  * user it describes.
  *
- * This is where trust is converted: the SAML assertion becomes the SP's own session,
- * and no request after this one has to know anything about SAML.
+ * This is where trust is converted: the SAML assertion becomes the SP's own token, and
+ * no request after this one has to know anything about SAML.
  */
 @Injectable()
 export class CompleteSingleSignOnUseCase {
     constructor(
         private readonly samlGateway: SamlGateway,
-        private readonly sessions: SessionStore,
+        private readonly accessTokens: AccessTokenIssuer,
     ) {
     }
 
@@ -34,7 +34,7 @@ export class CompleteSingleSignOnUseCase {
         const authenticatedUser = await this.samlGateway.validateSamlResponse(command.samlResponse);
 
         return {
-            sessionId: this.sessions.create(authenticatedUser),
+            accessToken: this.accessTokens.issue(authenticatedUser),
             returnTo: toSafeLandingPage(command.relayState),
         };
     }

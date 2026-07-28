@@ -1,0 +1,31 @@
+<%- include("_head", { title: "Signing you in - JSL-online" }) %>
+
+<h1>Signing you in…</h1>
+
+<p>The assertion checked out. Storing the SP's own access token, then continuing to
+    <code><%= returnTo %></code>.</p>
+
+<%
+/*
+ * The IdP POSTed here from its own origin, so it could not write to this origin's
+ * localStorage. The values ride in data attributes rather than inside the script, so
+ * nothing is ever interpolated into JavaScript source.
+ */
+%>
+<div id="token-handoff"
+     data-access-token="<%= accessToken %>"
+     data-return-to="<%= returnTo %>"></div>
+
+<noscript>
+    <p>JavaScript is required to complete sign-in: the access token has to be stored by
+        this page.</p>
+</noscript>
+
+<script>
+    const handoff = document.getElementById("token-handoff").dataset;
+
+    localStorage.setItem("sp_access_token", handoff.accessToken);
+    location.replace(handoff.returnTo);
+</script>
+
+<%- include("_foot") %>
