@@ -4,7 +4,7 @@ import { Browser, createBrowser, readFormAction, readHiddenFields } from "./brow
 /*
  * Drives the whole SP-initiated SSO flow over real HTTP against both applications.
  *
- * The ports deliberately avoid the 4000/5000 pair used by npm start, so the suite can
+ * The ports deliberately avoid the 4000/3000 pair used by npm start, so the suite can
  * run while a development server is up.
  */
 const TEST_PORTS = { identityProviderPort: 14000, serviceProviderPort: 15000 };

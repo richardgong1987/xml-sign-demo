@@ -54,7 +54,7 @@ SP side:
 ## 6. Application Flow
 
 ```text
-Browser           SP (:5000)                      IdP (:4000)
+Browser           SP (:3000)                      IdP (:4000)
   |  GET /login       |                                |
   |------------------>| StartSingleSignOnUseCase       |
   |<-- 302 -----------| builds AuthnRequest (deflate+base64)

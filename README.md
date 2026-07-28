@@ -24,17 +24,17 @@ npm install
 npm start
 ```
 
-Then open <http://localhost:5000> and click "Sign in through Demo OpenAM".
+Then open <http://localhost:3000> and click "Sign in through Demo OpenAM".
 
 Two independent applications start in the same process:
 
 - **Demo OpenAM (IdP)** — `http://localhost:4000`
-- **JSL-online (SP)** — `http://localhost:5000`
+- **JSL-online (SP)** — `http://localhost:3000`
 
 Both ports can be overridden:
 
 ```bash
-npm start -- --idp-port 4001 --sp-port 5001
+npm start -- --idp-port 4001 --sp-port 3001
 ```
 
 ### Endpoints
@@ -52,7 +52,7 @@ npm start -- --idp-port 4001 --sp-port 5001
 ### The full flow
 
 ```text
-Browser           SP (:5000)                      IdP (:4000)
+Browser           SP (:3000)                      IdP (:4000)
   |  GET /login       |                                |
   |------------------>| builds the AuthnRequest        |
   |<-- 302 -----------|                                |

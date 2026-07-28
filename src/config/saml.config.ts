@@ -45,7 +45,7 @@ export const SERVICE_PROVIDER_CONFIG = Symbol("ServiceProviderConfig");
 
 export const DEFAULT_PORTS: SamlPorts = Object.freeze({
     identityProviderPort: 4000,
-    serviceProviderPort: 5000,
+    serviceProviderPort: 3000,
 });
 
 export function createSamlConfigs({ identityProviderPort, serviceProviderPort }: SamlPorts): {

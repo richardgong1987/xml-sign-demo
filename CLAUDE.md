@@ -9,7 +9,7 @@ npm install        # install dependencies
 npm test           # everything (54 cases) — the verification loop
 npm run test:unit  # src/**/*.spec.ts only, no HTTP/keys needed
 npm run test:e2e   # test/*.e2e-spec.ts only, boots real apps on :14000/:15000
-npm start          # IdP on :4000 + SP on :5000 (override with -- --idp-port / --sp-port)
+npm start          # IdP on :4000 + SP on :3000 (override with -- --idp-port / --sp-port)
 npm run build      # nest build -> dist/
 npx tsc --noEmit   # typecheck without emitting
 ```
@@ -24,7 +24,7 @@ Note: `package-lock.json` is out of sync with `package.json`, so `npm ci` fails.
 
 ## What this repository is
 
-A teaching demo of SAML 2.0 SSO. Two NestJS applications run in one process on separate ports, playing **Demo OpenAM (IdP, :4000)** and **JSL-online (SP, :5000)**, showing how the two sides actually cooperate through the browser.
+A teaching demo of SAML 2.0 SSO. Two NestJS applications run in one process on separate ports, playing **Demo OpenAM (IdP, :4000)** and **JSL-online (SP, :3000)**, showing how the two sides actually cooperate through the browser.
 
 The design doc is `docs/design/saml-sso-http.md` — read it before changing boundaries; it records the dependency direction and the reasoning behind each trade-off.
 

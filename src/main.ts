@@ -12,7 +12,7 @@ async function main(): Promise<void> {
 /*
  * Ports are already a parameter in saml.config.ts, so node:util's parseArgs simply
  * exposes them on the command line:
- *   npm start -- --idp-port 4001 --sp-port 5001
+ *   npm start -- --idp-port 4001 --sp-port 3001
  */
 function readPortsFromCommandLine(): SamlPorts {
     const { values } = parseArgs({
