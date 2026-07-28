@@ -1,0 +1,20 @@
+<%- include("_head", { title: "已登录 - JSL-online" }) %>
+
+<h1>登录成功</h1>
+
+<p>以下内容来自 IdP 签名的 Assertion，已经通过签名和 SAML 协议校验。</p>
+
+<table>
+    <% fields.forEach((field) => { %>
+    <tr>
+        <td><%= field.label %></td>
+        <td><%= field.value %></td>
+    </tr>
+    <% }) %>
+</table>
+
+<form method="post" action="/logout">
+    <button type="submit">退出登录</button>
+</form>
+
+<%- include("_foot") %>
