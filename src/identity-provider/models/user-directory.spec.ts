@@ -1,4 +1,4 @@
-import { UnknownUserError, UserDirectory } from "./user-directory";
+import {UnknownUserError, UserDirectory} from "./user-directory";
 
 describe("UserDirectory", () => {
     const users = new UserDirectory();

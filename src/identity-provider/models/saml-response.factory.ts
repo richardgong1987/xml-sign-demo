@@ -1,6 +1,6 @@
-import { RegisteredServiceProvider } from "../../config/saml.config";
-import { createSamlId } from "../../shared/saml-id";
-import { DirectoryUser } from "./user-directory";
+import {RegisteredServiceProvider} from "../../config/saml.config";
+import {createSamlId} from "../../shared/saml-id";
+import {DirectoryUser} from "./user-directory";
 
 export interface UnsignedSamlResponseSpec {
     readonly identityProviderEntityId: string;
@@ -20,7 +20,7 @@ export interface UnsignedSamlResponseSpec {
  * the validity-window rules deterministically testable.
  */
 export function createUnsignedSamlResponse(spec: UnsignedSamlResponseSpec): string {
-    const { identityProviderEntityId, serviceProvider, user, authnRequestId, issuedAt } = spec;
+    const {identityProviderEntityId, serviceProvider, user, authnRequestId, issuedAt} = spec;
 
     const issueInstant = issuedAt.toISOString();
     const notBefore = new Date(issuedAt.getTime() - spec.acceptedClockSkewMs).toISOString();

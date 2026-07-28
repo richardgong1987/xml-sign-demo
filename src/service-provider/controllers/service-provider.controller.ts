@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Header, Inject, Post, Query, Redirect, Render, Req, Res } from "@nestjs/common";
-import { Request, Response } from "express";
+import {Body, Controller, Get, Header, Inject, Post, Query, Redirect, Render, Req, Res} from "@nestjs/common";
+import {Request, Response} from "express";
 
-import { SessionStore } from "../services/session-store";
-import { CompleteSingleSignOnUseCase } from "../services/complete-single-sign-on.use-case";
-import { StartSingleSignOnUseCase } from "../services/start-single-sign-on.use-case";
-import { ProfilePageModel, toProfilePageModel } from "../presenters/sp.presenter";
+import {SessionStore} from "../services/session-store";
+import {CompleteSingleSignOnUseCase} from "../services/complete-single-sign-on.use-case";
+import {StartSingleSignOnUseCase} from "../services/start-single-sign-on.use-case";
+import {ProfilePageModel, toProfilePageModel} from "../presenters/sp.presenter";
 
 export const SERVICE_PROVIDER_METADATA = Symbol("ServiceProviderMetadata");
 
@@ -15,7 +15,7 @@ const SESSION_COOKIE = "sp_session";
  * session cookie has to survive that navigation. SameSite=Lax still sends the cookie on
  * the top-level GET redirect that follows, while blocking cross-site writes.
  */
-const SESSION_COOKIE_OPTIONS = Object.freeze({ httpOnly: true, sameSite: "lax", path: "/" } as const);
+const SESSION_COOKIE_OPTIONS = Object.freeze({httpOnly: true, sameSite: "lax", path: "/"} as const);
 
 interface AssertionConsumerForm {
     readonly SAMLResponse?: string;
@@ -30,7 +30,8 @@ export class ServiceProviderController {
         private readonly completeSingleSignOn: CompleteSingleSignOnUseCase,
         private readonly sessions: SessionStore,
         @Inject(SERVICE_PROVIDER_METADATA) private readonly metadataXml: string,
-    ) {}
+    ) {
+    }
 
     @Get()
     @Render("home")
@@ -41,7 +42,7 @@ export class ServiceProviderController {
     @Get("login")
     @Redirect()
     async startLogin(@Query("returnTo") returnTo = ""): Promise<{ url: string }> {
-        return { url: await this.startSingleSignOn.execute({ returnTo }) };
+        return {url: await this.startSingleSignOn.execute({returnTo})};
     }
 
     @Get("api/saml/metadata")
@@ -52,7 +53,7 @@ export class ServiceProviderController {
 
     @Post("api/saml/acs")
     async consumeAssertion(@Body() form: AssertionConsumerForm, @Res() response: Response): Promise<void> {
-        const { sessionId, returnTo } = await this.completeSingleSignOn.execute({
+        const {sessionId, returnTo} = await this.completeSingleSignOn.execute({
             samlResponse: form.SAMLResponse ?? "",
             relayState: form.RelayState ?? "",
         });

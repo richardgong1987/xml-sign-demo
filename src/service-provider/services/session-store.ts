@@ -1,14 +1,16 @@
-import { randomUUID } from "node:crypto";
-import { Injectable } from "@nestjs/common";
+import {randomUUID} from "node:crypto";
+import {Injectable} from "@nestjs/common";
 
-import { AuthenticatedUser } from "../models/authenticated-user";
+import {AuthenticatedUser} from "../models/authenticated-user";
 
 /**
  * A port for the SP's own sessions, which have nothing to do with SAML any more.
  */
 export abstract class SessionStore {
     abstract create(user: AuthenticatedUser): string;
+
     abstract find(sessionId: string | undefined): AuthenticatedUser | null;
+
     abstract remove(sessionId: string | undefined): void;
 }
 

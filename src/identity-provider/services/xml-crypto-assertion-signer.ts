@@ -1,8 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { SignedXml } from "xml-crypto";
+import {Inject, Injectable} from "@nestjs/common";
+import {SignedXml} from "xml-crypto";
 
-import { SIGNING_CREDENTIAL, SigningCredential } from "../../shared/signing-credential";
-import { AssertionSigner } from "./assertion-signer";
+import {SIGNING_CREDENTIAL, SigningCredential} from "../../shared/signing-credential";
+import {AssertionSigner} from "./assertion-signer";
 
 const ASSERTION_XPATH = "//*[local-name(.)='Assertion']";
 const ASSERTION_ISSUER_XPATH = `${ASSERTION_XPATH}/*[local-name(.)='Issuer']`;
@@ -39,7 +39,7 @@ export class XmlCryptoAssertionSigner extends AssertionSigner {
 
         // SAML places <Signature> directly after the assertion's <Issuer>.
         signer.computeSignature(samlResponseXml, {
-            location: { reference: ASSERTION_ISSUER_XPATH, action: "after" },
+            location: {reference: ASSERTION_ISSUER_XPATH, action: "after"},
         });
 
         return signer.getSignedXml();

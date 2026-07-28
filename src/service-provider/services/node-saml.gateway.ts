@@ -1,10 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { SAML } from "@node-saml/node-saml";
+import {Inject, Injectable} from "@nestjs/common";
+import {SAML} from "@node-saml/node-saml";
 
-import { SERVICE_PROVIDER_CONFIG, ServiceProviderConfig } from "../../config/saml.config";
-import { AuthenticatedUser, createAuthenticatedUser } from "../models/authenticated-user";
-import { IDENTITY_PROVIDER_TRUST, IdentityProviderTrust } from "./idp-metadata.client";
-import { SamlGateway } from "./saml-gateway";
+import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "../../config/saml.config";
+import {AuthenticatedUser, createAuthenticatedUser} from "../models/authenticated-user";
+import {IDENTITY_PROVIDER_TRUST, IdentityProviderTrust} from "./idp-metadata.client";
+import {SamlGateway} from "./saml-gateway";
 
 /**
  * The SamlGateway implementation, wrapping @node-saml/node-saml.
@@ -58,7 +58,7 @@ export class NodeSamlGateway extends SamlGateway {
     }
 
     async validateSamlResponse(samlResponseBase64: string): Promise<AuthenticatedUser> {
-        const { profile } = await this.saml.validatePostResponseAsync({
+        const {profile} = await this.saml.validatePostResponseAsync({
             SAMLResponse: samlResponseBase64,
         });
 

@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import {Injectable} from "@nestjs/common";
 
-import { SamlGateway } from "./saml-gateway";
-import { SessionStore } from "./session-store";
+import {SamlGateway} from "./saml-gateway";
+import {SessionStore} from "./session-store";
 
 const DEFAULT_LANDING_PAGE = "/profile";
 
@@ -27,7 +27,8 @@ export class CompleteSingleSignOnUseCase {
     constructor(
         private readonly samlGateway: SamlGateway,
         private readonly sessions: SessionStore,
-    ) {}
+    ) {
+    }
 
     async execute(command: CompleteSingleSignOnCommand): Promise<CompletedSingleSignOn> {
         const authenticatedUser = await this.samlGateway.validateSamlResponse(command.samlResponse);

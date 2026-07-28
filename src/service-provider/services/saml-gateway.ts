@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from "../models/authenticated-user";
+import {AuthenticatedUser} from "../models/authenticated-user";
 
 /**
  * A port covering everything the SP needs from the SAML protocol itself.
@@ -8,6 +8,8 @@ import { AuthenticatedUser } from "../models/authenticated-user";
  */
 export abstract class SamlGateway {
     abstract createLoginRedirectUrl(relayState: string): Promise<string>;
+
     abstract validateSamlResponse(samlResponseBase64: string): Promise<AuthenticatedUser>;
+
     abstract describeMetadata(): string;
 }

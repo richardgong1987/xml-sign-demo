@@ -1,7 +1,7 @@
-import { parseArgs, styleText } from "node:util";
+import {parseArgs, styleText} from "node:util";
 
-import { startSamlDemo, RunningSamlDemo } from "./bootstrap";
-import { DEFAULT_PORTS, SamlPorts } from "./config/saml.config";
+import {RunningSamlDemo, startSamlDemo} from "./bootstrap";
+import {DEFAULT_PORTS, SamlPorts} from "./config/saml.config";
 
 async function main(): Promise<void> {
     const demo = await startSamlDemo(readPortsFromCommandLine());
@@ -15,10 +15,10 @@ async function main(): Promise<void> {
  *   npm start -- --idp-port 4001 --sp-port 3001
  */
 function readPortsFromCommandLine(): SamlPorts {
-    const { values } = parseArgs({
+    const {values} = parseArgs({
         options: {
-            "idp-port": { type: "string" },
-            "sp-port": { type: "string" },
+            "idp-port": {type: "string"},
+            "sp-port": {type: "string"},
         },
     });
 

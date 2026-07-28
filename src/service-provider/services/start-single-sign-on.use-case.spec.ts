@@ -1,8 +1,8 @@
-import { Test } from "@nestjs/testing";
+import {Test} from "@nestjs/testing";
 
-import { AuthenticatedUser } from "../models/authenticated-user";
-import { SamlGateway } from "./saml-gateway";
-import { StartSingleSignOnUseCase } from "./start-single-sign-on.use-case";
+import {AuthenticatedUser} from "../models/authenticated-user";
+import {SamlGateway} from "./saml-gateway";
+import {StartSingleSignOnUseCase} from "./start-single-sign-on.use-case";
 
 /*
  * A fake SamlGateway: it records the RelayState and builds no real AuthnRequest.
@@ -28,7 +28,7 @@ describe("StartSingleSignOnUseCase", () => {
     it("hands returnTo to the IdP as RelayState", async () => {
         const samlGateway = new RecordingSamlGateway();
         const moduleRef = await Test.createTestingModule({
-            providers: [StartSingleSignOnUseCase, { provide: SamlGateway, useValue: samlGateway }],
+            providers: [StartSingleSignOnUseCase, {provide: SamlGateway, useValue: samlGateway}],
         }).compile();
 
         const redirectUrl = await moduleRef.get(StartSingleSignOnUseCase).execute({

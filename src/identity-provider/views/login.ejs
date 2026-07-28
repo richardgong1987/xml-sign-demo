@@ -17,11 +17,11 @@
     <h2>Pick a demo user</h2>
     <ul>
         <% users.forEach((user) => { %>
-        <li>
-            <button type="submit" name="uid" value="<%= user.uid %>">
-                Sign in as <%= user.uid %> (role=<%= user.role %>)
-            </button>
-        </li>
+            <li>
+                <button type="submit" name="uid" value="<%= user.uid %>">
+                    Sign in as <%= user.uid %> (role=<%= user.role %>)
+                </button>
+            </li>
         <% }) %>
     </ul>
 

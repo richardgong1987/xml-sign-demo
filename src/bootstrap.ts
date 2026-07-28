@@ -1,29 +1,22 @@
 import path from "node:path";
-import { INestApplication } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
-import { NestExpressApplication } from "@nestjs/platform-express";
+import {INestApplication} from "@nestjs/common";
+import {NestFactory} from "@nestjs/core";
+import {NestExpressApplication} from "@nestjs/platform-express";
 import cookieParser from "cookie-parser";
 
-import {
-    IdentityProviderConfig,
-    SamlPorts,
-    ServiceProviderConfig,
-    createSamlConfigs,
-} from "./config/saml.config";
-import { IdentityProviderModule } from "./identity-provider/identity-provider.module";
-import { ServiceProviderModule } from "./service-provider/service-provider.module";
-import {
-    IDENTITY_PROVIDER_TRUST,
-    IdentityProviderTrust,
-} from "./service-provider/services/idp-metadata.client";
-import { SamlFailureFilter } from "./shared/saml-failure.filter";
-import { createDemoSigningCredential } from "./shared/signing-credential";
-import { configureWebLayer } from "./shared/web-layer";
+import {createSamlConfigs, IdentityProviderConfig, SamlPorts, ServiceProviderConfig,} from "./config/saml.config";
+import {IdentityProviderModule} from "./identity-provider/identity-provider.module";
+import {ServiceProviderModule} from "./service-provider/service-provider.module";
+import {IDENTITY_PROVIDER_TRUST, IdentityProviderTrust,} from "./service-provider/services/idp-metadata.client";
+import {SamlFailureFilter} from "./shared/saml-failure.filter";
+import {createDemoSigningCredential} from "./shared/signing-credential";
+import {configureWebLayer} from "./shared/web-layer";
 
 export interface RunningSamlDemo {
     readonly identityProviderConfig: IdentityProviderConfig;
     readonly serviceProviderConfig: ServiceProviderConfig;
     readonly identityProvider: IdentityProviderTrust;
+
     stop(): Promise<void>;
 }
 
@@ -36,12 +29,12 @@ export interface RunningSamlDemo {
  * The end-to-end suite calls this too, so it exercises the real wiring.
  */
 export async function startSamlDemo(ports: SamlPorts): Promise<RunningSamlDemo> {
-    const { identityProviderConfig, serviceProviderConfig } = createSamlConfigs(ports);
+    const {identityProviderConfig, serviceProviderConfig} = createSamlConfigs(ports);
 
     const signingCredential = await createDemoSigningCredential("Demo OpenAM Signing");
 
     const identityProvider = await createApp({
-        module: IdentityProviderModule.register({ config: identityProviderConfig, signingCredential }),
+        module: IdentityProviderModule.register({config: identityProviderConfig, signingCredential}),
         viewsDir: path.join(__dirname, "identity-provider", "views"),
         serviceName: "IdP",
     });

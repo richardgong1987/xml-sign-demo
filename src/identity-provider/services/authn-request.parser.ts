@@ -1,6 +1,6 @@
 import zlib from "node:zlib";
-import { Injectable } from "@nestjs/common";
-import { DOMParser } from "@xmldom/xmldom";
+import {Injectable} from "@nestjs/common";
+import {DOMParser} from "@xmldom/xmldom";
 import xpath from "xpath";
 
 export class InvalidAuthnRequestError extends Error {
@@ -41,7 +41,7 @@ export class AuthnRequestParser {
             throw new InvalidAuthnRequestError("ID or Issuer is missing");
         }
 
-        return Object.freeze({ requestId: String(requestId), serviceProviderEntityId });
+        return Object.freeze({requestId: String(requestId), serviceProviderEntityId});
     }
 
     private inflate(samlRequestParam: string | undefined): string {
@@ -54,7 +54,7 @@ export class AuthnRequestParser {
         } catch (error) {
             // Attach the underlying failure as a cause so the log shows the whole chain
             // instead of a single hand-concatenated sentence.
-            throw new InvalidAuthnRequestError("base64 or deflate decoding failed", { cause: error });
+            throw new InvalidAuthnRequestError("base64 or deflate decoding failed", {cause: error});
         }
     }
 
@@ -71,7 +71,7 @@ export class AuthnRequestParser {
         };
 
         try {
-            return new DOMParser({ onError }).parseFromString(
+            return new DOMParser({onError}).parseFromString(
                 authnRequestXml,
                 "application/xml",
             ) as unknown as Document;
@@ -80,7 +80,7 @@ export class AuthnRequestParser {
                 throw error;
             }
 
-            throw new InvalidAuthnRequestError("the decoded payload is not valid XML", { cause: error });
+            throw new InvalidAuthnRequestError("the decoded payload is not valid XML", {cause: error});
         }
     }
 }

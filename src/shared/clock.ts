@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import {Injectable} from "@nestjs/common";
 
 /**
  * A port, expressed as an abstract class so it survives compilation and can serve as

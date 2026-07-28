@@ -1,9 +1,9 @@
-import { Test } from "@nestjs/testing";
+import {Test} from "@nestjs/testing";
 
-import { AuthenticatedUser } from "../models/authenticated-user";
-import { CompleteSingleSignOnUseCase } from "./complete-single-sign-on.use-case";
-import { SamlGateway } from "./saml-gateway";
-import { SessionStore } from "./session-store";
+import {AuthenticatedUser} from "../models/authenticated-user";
+import {CompleteSingleSignOnUseCase} from "./complete-single-sign-on.use-case";
+import {SamlGateway} from "./saml-gateway";
+import {SessionStore} from "./session-store";
 
 const AUTHENTICATED_USER: AuthenticatedUser = {
     nameId: "hanjin",
@@ -61,28 +61,28 @@ async function createUseCase(rejectionReason?: string) {
     const moduleRef = await Test.createTestingModule({
         providers: [
             CompleteSingleSignOnUseCase,
-            { provide: SamlGateway, useValue: new StubSamlGateway(rejectionReason) },
-            { provide: SessionStore, useValue: sessions },
+            {provide: SamlGateway, useValue: new StubSamlGateway(rejectionReason)},
+            {provide: SessionStore, useValue: sessions},
         ],
     }).compile();
 
-    return { useCase: moduleRef.get(CompleteSingleSignOnUseCase), sessions };
+    return {useCase: moduleRef.get(CompleteSingleSignOnUseCase), sessions};
 }
 
 describe("CompleteSingleSignOnUseCase", () => {
     it("opens a session for the asserted user once validation succeeds", async () => {
-        const { useCase, sessions } = await createUseCase();
+        const {useCase, sessions} = await createUseCase();
 
-        const result = await useCase.execute({ samlResponse: "base64", relayState: "/profile" });
+        const result = await useCase.execute({samlResponse: "base64", relayState: "/profile"});
 
         expect(sessions.createdUsers).toEqual([AUTHENTICATED_USER]);
         expect(result.sessionId).toBe("session-1");
     });
 
     it("redirects to RelayState when it is a local path", async () => {
-        const { useCase } = await createUseCase();
+        const {useCase} = await createUseCase();
 
-        const result = await useCase.execute({ samlResponse: "base64", relayState: "/orders/42" });
+        const result = await useCase.execute({samlResponse: "base64", relayState: "/orders/42"});
 
         expect(result.returnTo).toBe("/orders/42");
     });
@@ -90,19 +90,19 @@ describe("CompleteSingleSignOnUseCase", () => {
     it.each(["", "https://attacker.example.test", "//attacker.example.test"])(
         "falls back to the default landing page for RelayState %p",
         async (relayState) => {
-            const { useCase } = await createUseCase();
+            const {useCase} = await createUseCase();
 
-            const result = await useCase.execute({ samlResponse: "base64", relayState });
+            const result = await useCase.execute({samlResponse: "base64", relayState});
 
             expect(result.returnTo).toBe("/profile");
         },
     );
 
     it("opens no session when validation fails", async () => {
-        const { useCase, sessions } = await createUseCase("Invalid signature");
+        const {useCase, sessions} = await createUseCase("Invalid signature");
 
         await expect(
-            useCase.execute({ samlResponse: "tampered", relayState: "/profile" }),
+            useCase.execute({samlResponse: "tampered", relayState: "/profile"}),
         ).rejects.toThrow(/Invalid signature/);
         expect(sessions.createdUsers).toHaveLength(0);
     });

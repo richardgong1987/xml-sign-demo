@@ -18,13 +18,13 @@ export const SIGNING_CREDENTIAL = Symbol("SigningCredential");
  * verify afterwards.
  */
 export async function createDemoSigningCredential(commonName: string): Promise<SigningCredential> {
-    const pems = await selfsigned.generate([{ name: "commonName", value: commonName }], {
+    const pems = await selfsigned.generate([{name: "commonName", value: commonName}], {
         keySize: 2048,
         algorithm: "sha256",
         notAfterDate: daysFromNow(CERTIFICATE_VALID_DAYS),
     });
 
-    return Object.freeze({ privateKeyPem: pems.private, certificatePem: pems.cert });
+    return Object.freeze({privateKeyPem: pems.private, certificatePem: pems.cert});
 }
 
 function daysFromNow(days: number): Date {

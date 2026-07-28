@@ -1,16 +1,13 @@
-import { DynamicModule, Module } from "@nestjs/common";
+import {DynamicModule, Module} from "@nestjs/common";
 
-import { SERVICE_PROVIDER_CONFIG, ServiceProviderConfig } from "../config/saml.config";
-import {
-    SERVICE_PROVIDER_METADATA,
-    ServiceProviderController,
-} from "./controllers/service-provider.controller";
-import { IDENTITY_PROVIDER_TRUST, fetchIdentityProviderTrust } from "./services/idp-metadata.client";
-import { NodeSamlGateway } from "./services/node-saml.gateway";
-import { SamlGateway } from "./services/saml-gateway";
-import { CompleteSingleSignOnUseCase } from "./services/complete-single-sign-on.use-case";
-import { StartSingleSignOnUseCase } from "./services/start-single-sign-on.use-case";
-import { InMemorySessionStore, SessionStore } from "./services/session-store";
+import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "../config/saml.config";
+import {SERVICE_PROVIDER_METADATA, ServiceProviderController,} from "./controllers/service-provider.controller";
+import {fetchIdentityProviderTrust, IDENTITY_PROVIDER_TRUST} from "./services/idp-metadata.client";
+import {NodeSamlGateway} from "./services/node-saml.gateway";
+import {SamlGateway} from "./services/saml-gateway";
+import {CompleteSingleSignOnUseCase} from "./services/complete-single-sign-on.use-case";
+import {StartSingleSignOnUseCase} from "./services/start-single-sign-on.use-case";
+import {InMemorySessionStore, SessionStore} from "./services/session-store";
 
 /**
  * JSL-online as a Nest module.
@@ -26,7 +23,7 @@ export class ServiceProviderModule {
             module: ServiceProviderModule,
             controllers: [ServiceProviderController],
             providers: [
-                { provide: SERVICE_PROVIDER_CONFIG, useValue: config },
+                {provide: SERVICE_PROVIDER_CONFIG, useValue: config},
                 {
                     provide: IDENTITY_PROVIDER_TRUST,
                     useFactory: () => fetchIdentityProviderTrust(config.identityProviderMetadataUrl),
@@ -35,8 +32,8 @@ export class ServiceProviderModule {
                 StartSingleSignOnUseCase,
                 CompleteSingleSignOnUseCase,
 
-                { provide: SamlGateway, useClass: NodeSamlGateway },
-                { provide: SessionStore, useClass: InMemorySessionStore },
+                {provide: SamlGateway, useClass: NodeSamlGateway},
+                {provide: SessionStore, useClass: InMemorySessionStore},
                 {
                     provide: SERVICE_PROVIDER_METADATA,
                     useFactory: (gateway: SamlGateway) => gateway.describeMetadata(),

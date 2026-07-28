@@ -1,7 +1,7 @@
-import { DOMParser } from "@xmldom/xmldom";
+import {DOMParser} from "@xmldom/xmldom";
 import xpath from "xpath";
 
-import { toCertificatePem } from "../../shared/x509-certificate";
+import {toCertificatePem} from "../../shared/x509-certificate";
 
 const REDIRECT_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
 const METADATA_FETCH_TIMEOUT_MS = 5_000;
@@ -28,9 +28,9 @@ export async function fetchIdentityProviderTrust(metadataUrl: string): Promise<I
     try {
         // Don't let the SP hang forever when the IdP is down — the reason startup
         // failed would be very hard to see.
-        response = await fetch(metadataUrl, { signal: AbortSignal.timeout(METADATA_FETCH_TIMEOUT_MS) });
+        response = await fetch(metadataUrl, {signal: AbortSignal.timeout(METADATA_FETCH_TIMEOUT_MS)});
     } catch (error) {
-        throw new Error(`Cannot read the IdP metadata: ${metadataUrl} is unreachable`, { cause: error });
+        throw new Error(`Cannot read the IdP metadata: ${metadataUrl} is unreachable`, {cause: error});
     }
 
     if (!response.ok) {

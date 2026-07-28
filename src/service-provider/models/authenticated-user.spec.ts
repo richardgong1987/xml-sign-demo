@@ -1,8 +1,4 @@
-import {
-    AuthenticatedUser,
-    InvalidAuthenticatedUserError,
-    createAuthenticatedUser,
-} from "./authenticated-user";
+import {AuthenticatedUser, createAuthenticatedUser, InvalidAuthenticatedUserError,} from "./authenticated-user";
 
 const VALID_PROFILE: AuthenticatedUser = {
     nameId: "hanjin",
@@ -18,7 +14,7 @@ describe("createAuthenticatedUser", () => {
     });
 
     it("refuses to be created without a NameID", () => {
-        expect(() => createAuthenticatedUser({ ...VALID_PROFILE, nameId: "" })).toThrow(
+        expect(() => createAuthenticatedUser({...VALID_PROFILE, nameId: ""})).toThrow(
             InvalidAuthenticatedUserError,
         );
     });

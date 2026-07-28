@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from "../models/authenticated-user";
+import {AuthenticatedUser} from "../models/authenticated-user";
 
 /*
  * A presenter turns a use-case result into exactly the data one template needs.
@@ -15,15 +15,15 @@ export interface ProfilePageModel {
 }
 
 const PROFILE_FIELDS: readonly { key: keyof AuthenticatedUser; label: string }[] = Object.freeze([
-    { key: "nameId", label: "NameID" },
-    { key: "uid", label: "uid" },
-    { key: "email", label: "email" },
-    { key: "role", label: "role" },
-    { key: "sessionIndex", label: "SessionIndex" },
+    {key: "nameId", label: "NameID"},
+    {key: "uid", label: "uid"},
+    {key: "email", label: "email"},
+    {key: "role", label: "role"},
+    {key: "sessionIndex", label: "SessionIndex"},
 ]);
 
 export function toProfilePageModel(user: AuthenticatedUser): ProfilePageModel {
     return {
-        fields: PROFILE_FIELDS.map(({ key, label }) => ({ label, value: user[key] })),
+        fields: PROFILE_FIELDS.map(({key, label}) => ({label, value: user[key]})),
     };
 }

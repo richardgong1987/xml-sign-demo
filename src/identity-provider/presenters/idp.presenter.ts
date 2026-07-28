@@ -1,5 +1,5 @@
-import { DirectoryUser } from "../models/user-directory";
-import { ParsedAuthnRequest } from "../services/authn-request.parser";
+import {DirectoryUser} from "../models/user-directory";
+import {ParsedAuthnRequest} from "../services/authn-request.parser";
 
 /*
  * A presenter turns a use-case result into exactly the data one template needs.

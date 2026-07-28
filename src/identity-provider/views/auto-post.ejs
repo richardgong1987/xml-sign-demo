@@ -8,7 +8,9 @@
 <form id="saml-post-form" method="post" action="<%= assertionConsumerServiceUrl %>">
     <input type="hidden" name="SAMLResponse" value="<%= samlResponseBase64 %>">
     <input type="hidden" name="RelayState" value="<%= relayState %>">
-    <noscript><button type="submit">Continue</button></noscript>
+    <noscript>
+        <button type="submit">Continue</button>
+    </noscript>
 </form>
 
 <script>document.getElementById("saml-post-form").submit();</script>

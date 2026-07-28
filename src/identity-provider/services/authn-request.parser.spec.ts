@@ -1,6 +1,6 @@
 import zlib from "node:zlib";
 
-import { AuthnRequestParser, InvalidAuthnRequestError } from "./authn-request.parser";
+import {AuthnRequestParser, InvalidAuthnRequestError} from "./authn-request.parser";
 
 const SP_ENTITY_ID = "https://jsl-online.example.test/api/saml/metadata";
 
@@ -12,7 +12,7 @@ function encodeRedirectBinding(authnRequestXml: string): string {
     return zlib.deflateRawSync(Buffer.from(authnRequestXml, "utf8")).toString("base64");
 }
 
-function authnRequestXml({ id = "_request-1", issuer = SP_ENTITY_ID } = {}): string {
+function authnRequestXml({id = "_request-1", issuer = SP_ENTITY_ID} = {}): string {
     return `<samlp:AuthnRequest
     xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
     xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
@@ -124,7 +124,7 @@ describe("AuthnRequestParser", () => {
 
     it("rejects an AuthnRequest without an Issuer", () => {
         expect(() =>
-            parser.parseRedirectBinding(encodeRedirectBinding(authnRequestXml({ issuer: "" }))),
+            parser.parseRedirectBinding(encodeRedirectBinding(authnRequestXml({issuer: ""}))),
         ).toThrow(InvalidAuthnRequestError);
     });
 

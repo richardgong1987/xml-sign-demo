@@ -1,4 +1,4 @@
-import { toCertificateBody } from "../../shared/x509-certificate";
+import {toCertificateBody} from "../../shared/x509-certificate";
 
 export interface IdentityProviderMetadataSpec {
     readonly entityId: string;

@@ -1,11 +1,11 @@
-import { Test } from "@nestjs/testing";
+import {Test} from "@nestjs/testing";
 
-import { IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig } from "../../config/saml.config";
-import { Clock } from "../../shared/clock";
-import { ServiceProviderRegistry, UnregisteredServiceProviderError } from "../models/service-provider-registry";
-import { UnknownUserError, UserDirectory } from "../models/user-directory";
-import { AssertionSigner } from "./assertion-signer";
-import { IssueSamlResponseCommand, IssueSamlResponseUseCase } from "./issue-saml-response.use-case";
+import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../../config/saml.config";
+import {Clock} from "../../shared/clock";
+import {ServiceProviderRegistry, UnregisteredServiceProviderError} from "../models/service-provider-registry";
+import {UnknownUserError, UserDirectory} from "../models/user-directory";
+import {AssertionSigner} from "./assertion-signer";
+import {IssueSamlResponseCommand, IssueSamlResponseUseCase} from "./issue-saml-response.use-case";
 
 const JSL_ONLINE = {
     entityId: "https://jsl-online.example.test/metadata",
@@ -61,9 +61,9 @@ describe("IssueSamlResponseUseCase", () => {
                 IssueSamlResponseUseCase,
                 UserDirectory,
                 ServiceProviderRegistry,
-                { provide: IDENTITY_PROVIDER_CONFIG, useValue: IDENTITY_PROVIDER },
-                { provide: AssertionSigner, useValue: assertionSigner },
-                { provide: Clock, useClass: FixedClock },
+                {provide: IDENTITY_PROVIDER_CONFIG, useValue: IDENTITY_PROVIDER},
+                {provide: AssertionSigner, useValue: assertionSigner},
+                {provide: Clock, useClass: FixedClock},
             ],
         }).compile();
 
@@ -92,14 +92,14 @@ describe("IssueSamlResponseUseCase", () => {
     });
 
     it("never reaches the signing step for an unknown user", () => {
-        expect(() => useCase.execute(validCommand({ uid: "nobody" }))).toThrow(UnknownUserError);
+        expect(() => useCase.execute(validCommand({uid: "nobody"}))).toThrow(UnknownUserError);
         expect(assertionSigner.signedDocuments).toHaveLength(0);
     });
 
     it("never reaches the signing step for an unregistered SP", () => {
         expect(() =>
             useCase.execute(
-                validCommand({ serviceProviderEntityId: "https://attacker.example.test/metadata" }),
+                validCommand({serviceProviderEntityId: "https://attacker.example.test/metadata"}),
             ),
         ).toThrow(UnregisteredServiceProviderError);
         expect(assertionSigner.signedDocuments).toHaveLength(0);

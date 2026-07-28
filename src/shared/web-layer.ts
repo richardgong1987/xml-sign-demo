@@ -1,5 +1,5 @@
 import path from "node:path";
-import { NestExpressApplication } from "@nestjs/platform-express";
+import {NestExpressApplication} from "@nestjs/platform-express";
 
 const SHARED_VIEWS_DIR = path.join(__dirname, "views");
 const PUBLIC_DIR = path.join(__dirname, "public");

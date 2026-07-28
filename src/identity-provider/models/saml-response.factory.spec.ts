@@ -1,7 +1,7 @@
-import { DOMParser } from "@xmldom/xmldom";
+import {DOMParser} from "@xmldom/xmldom";
 import xpath from "xpath";
 
-import { UnsignedSamlResponseSpec, createUnsignedSamlResponse } from "./saml-response.factory";
+import {createUnsignedSamlResponse, UnsignedSamlResponseSpec} from "./saml-response.factory";
 
 const ISSUED_AT = new Date("2026-07-28T09:00:00.000Z");
 
@@ -14,7 +14,7 @@ function buildSamlResponse(overrides: Partial<UnsignedSamlResponseSpec> = {}): s
     return createUnsignedSamlResponse({
         identityProviderEntityId: "https://openam.example.test/idp",
         serviceProvider: SERVICE_PROVIDER,
-        user: { uid: "hanjin", email: "hanjin@example.test", role: "trader" },
+        user: {uid: "hanjin", email: "hanjin@example.test", role: "trader"},
         authnRequestId: "_authn-request-1",
         issuedAt: ISSUED_AT,
         assertionLifetimeMs: 5 * 60_000,
@@ -66,7 +66,7 @@ describe("createUnsignedSamlResponse", () => {
     });
 
     it("echoes the AuthnRequest ID into Response and SubjectConfirmationData", () => {
-        const samlResponse = buildSamlResponse({ authnRequestId: "_authn-request-42" });
+        const samlResponse = buildSamlResponse({authnRequestId: "_authn-request-42"});
 
         expect(read(samlResponse, "/*[local-name(.)='Response']/@InResponseTo")).toBe(
             "_authn-request-42",
@@ -78,7 +78,7 @@ describe("createUnsignedSamlResponse", () => {
 
     it("takes NameID and the attributes from the given user", () => {
         const samlResponse = buildSamlResponse({
-            user: { uid: "sakura", email: "sakura@example.test", role: "auditor" },
+            user: {uid: "sakura", email: "sakura@example.test", role: "auditor"},
         });
 
         expect(read(samlResponse, "//*[local-name(.)='NameID']")).toBe("sakura");

@@ -1,15 +1,10 @@
-import { Body, Controller, Get, Header, Inject, Post, Query, Render } from "@nestjs/common";
+import {Body, Controller, Get, Header, Inject, Post, Query, Render} from "@nestjs/common";
 
-import { UserDirectory } from "../models/user-directory";
-import { AuthnRequestParser } from "../services/authn-request.parser";
-import { IssueSamlResponseUseCase } from "../services/issue-saml-response.use-case";
-import { tamperWithRole } from "../services/tampering.simulator";
-import {
-    AutoPostFormModel,
-    LoginPageModel,
-    toAutoPostFormModel,
-    toLoginPageModel,
-} from "../presenters/idp.presenter";
+import {UserDirectory} from "../models/user-directory";
+import {AuthnRequestParser} from "../services/authn-request.parser";
+import {IssueSamlResponseUseCase} from "../services/issue-saml-response.use-case";
+import {tamperWithRole} from "../services/tampering.simulator";
+import {AutoPostFormModel, LoginPageModel, toAutoPostFormModel, toLoginPageModel,} from "../presenters/idp.presenter";
 
 export const IDENTITY_PROVIDER_METADATA = Symbol("IdentityProviderMetadata");
 
@@ -38,7 +33,8 @@ export class IdentityProviderController {
         private readonly authnRequests: AuthnRequestParser,
         private readonly users: UserDirectory,
         @Inject(IDENTITY_PROVIDER_METADATA) private readonly metadataXml: string,
-    ) {}
+    ) {
+    }
 
     @Get("idp/metadata")
     @Header("content-type", "application/xml")

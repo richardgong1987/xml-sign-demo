@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
+import {Injectable} from "@nestjs/common";
 
-import { SamlGateway } from "./saml-gateway";
+import {SamlGateway} from "./saml-gateway";
 
 export interface StartSingleSignOnCommand {
     readonly returnTo: string;
@@ -14,7 +14,8 @@ export interface StartSingleSignOnCommand {
  */
 @Injectable()
 export class StartSingleSignOnUseCase {
-    constructor(private readonly samlGateway: SamlGateway) {}
+    constructor(private readonly samlGateway: SamlGateway) {
+    }
 
     /** @returns the IdP sign-in URL */
     async execute(command: StartSingleSignOnCommand): Promise<string> {

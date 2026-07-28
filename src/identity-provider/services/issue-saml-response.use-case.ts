@@ -1,11 +1,11 @@
-import { Inject, Injectable } from "@nestjs/common";
+import {Inject, Injectable} from "@nestjs/common";
 
-import { IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig } from "../../config/saml.config";
-import { Clock } from "../../shared/clock";
-import { createUnsignedSamlResponse } from "../models/saml-response.factory";
-import { ServiceProviderRegistry } from "../models/service-provider-registry";
-import { UserDirectory } from "../models/user-directory";
-import { AssertionSigner } from "./assertion-signer";
+import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../../config/saml.config";
+import {Clock} from "../../shared/clock";
+import {createUnsignedSamlResponse} from "../models/saml-response.factory";
+import {ServiceProviderRegistry} from "../models/service-provider-registry";
+import {UserDirectory} from "../models/user-directory";
+import {AssertionSigner} from "./assertion-signer";
 
 export interface IssueSamlResponseCommand {
     readonly uid: string;
@@ -30,7 +30,8 @@ export class IssueSamlResponseUseCase {
         private readonly serviceProviders: ServiceProviderRegistry,
         private readonly assertionSigner: AssertionSigner,
         private readonly clock: Clock,
-    ) {}
+    ) {
+    }
 
     execute(command: IssueSamlResponseCommand): IssuedSamlResponse {
         const user = this.users.find(command.uid);

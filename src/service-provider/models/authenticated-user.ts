@@ -25,5 +25,5 @@ export function createAuthenticatedUser(user: AuthenticatedUser): AuthenticatedU
         throw new InvalidAuthenticatedUserError("NameID is missing");
     }
 
-    return Object.freeze({ ...user });
+    return Object.freeze({...user});
 }
