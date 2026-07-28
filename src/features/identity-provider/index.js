@@ -4,6 +4,7 @@ const path = require("node:path");
 const express = require("express");
 
 const { STATIC_ASSETS_DIR } = require("../../shared/static-assets");
+const { useEjsViews } = require("../../shared/view-engine");
 const { systemClock } = require("../../shared/system-clock");
 const { createHttpErrorHandler } = require("../../shared/http-error-handler");
 const { createServiceProviderRegistry } = require("./service-provider-registry");
@@ -28,8 +29,7 @@ function createIdentityProviderApp({ config, signingCredential }) {
 
     const app = express();
 
-    app.set("view engine", "ejs");
-    app.set("views", path.join(__dirname, "views"));
+    useEjsViews(app, path.join(__dirname, "views"));
 
     app.use(express.static(STATIC_ASSETS_DIR));
     app.use(express.urlencoded({ extended: false }));

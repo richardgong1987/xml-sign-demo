@@ -1,11 +1,4 @@
-<!doctype html>
-<html lang="zh">
-<head>
-    <meta charset="utf-8">
-    <title>正在跳转回 SP</title>
-    <link rel="stylesheet" href="/demo.css">
-</head>
-<body>
+<%- include("_head", { title: "正在跳转回 SP" }) %>
 
 <h1>IdP 已签发 SAMLResponse</h1>
 
@@ -20,5 +13,4 @@
 
 <script>document.getElementById("saml-post-form").submit();</script>
 
-</body>
-</html>
+<%- include("_foot") %>

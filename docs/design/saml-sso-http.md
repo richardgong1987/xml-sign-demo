@@ -92,13 +92,19 @@ infrastructure  xml-crypto-assertion-signer / node-saml.gateway
 HTML 不写在 JavaScript 里。职责切成三层：
 
 ```text
-presenter        决定用哪个模板、模板需要哪些数据，返回 { view, model }
-views/*.ejs      纯 HTML 模板，转义由 EJS 的 <%= %> 负责
-shared/public/   静态样式表，IdP 与 SP 各自挂到自己的根路径下
+presenter          决定用哪个模板、模板需要哪些数据，返回 { view, model }
+<feature>/views/   该 feature 的页面模板，转义由 EJS 的 <%= %> 负责
+shared/views/      公共 layout：_head.ejs 与 _foot.ejs
+shared/public/     静态样式表，IdP 与 SP 各自挂到自己的根路径下
 ```
 
 controller 通过 `shared/render-view.js` 调用模板引擎，因此 controller 与 presenter
-都不认识 EJS。换模板引擎时只需要改 `render-view.js` 和两个 feature 的组装点。
+都不认识 EJS。换模板引擎时只需要改 `render-view.js`、`view-engine.js` 和模板本身。
+
+`shared/view-engine.js` 把每个 app 的模板目录设成 `[feature/views, shared/views]`：
+页面在 feature 里找，`include("_head")` 回落到公共 layout。需要注意 Express 不会
+把 views 目录传给模板引擎，所以同一份目录列表还要写进 `app.locals.views`，
+EJS 解析 include 时才看得到。
 
 Port 用 JSDoc `@typedef` 声明在使用它的 use case 文件顶部。JavaScript 没有
 interface 关键字，为一个只有一两个方法的 port 单独建文件只会增加跳转成本。

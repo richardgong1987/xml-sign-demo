@@ -1,11 +1,4 @@
-<!doctype html>
-<html lang="zh">
-<head>
-    <meta charset="utf-8">
-    <title>JSL-online（SP）</title>
-    <link rel="stylesheet" href="/demo.css">
-</head>
-<body>
+<%- include("_head", { title: "JSL-online（SP）" }) %>
 
 <h1>JSL-online（SP）</h1>
 
@@ -19,5 +12,4 @@
     <li><code>POST /api/saml/acs</code>：接收 IdP 投递的 SAMLResponse</li>
 </ul>
 
-</body>
-</html>
+<%- include("_foot") %>

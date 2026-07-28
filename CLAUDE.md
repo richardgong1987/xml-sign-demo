@@ -31,7 +31,8 @@ Feature-first, dependencies pointing inward. Both features are flat folders — 
 ```
 src/config.js      entity IDs, URLs, lifetimes — the only place ports/hosts appear
 src/server.js      composition root
-src/shared/        clock, SAML id, X.509 PEM helpers, demo credential, render-view
+src/shared/        clock, SAML id, X.509 PEM helpers, demo credential, render-view, view-engine
+src/shared/views/  _head.ejs / _foot.ejs — layout shared by both features
 src/shared/public/ demo.css — served statically by both apps
 src/features/identity-provider/   *.factory (domain) → *.use-case → *.controller/*.presenter → views/*.ejs
 src/features/service-provider/    authenticated-user (domain) → *.use-case → *.controller/*.presenter → views/*.ejs
@@ -39,7 +40,8 @@ src/features/service-provider/    authenticated-user (domain) → *.use-case →
 
 Rules that hold across the codebase:
 
-- No HTML or CSS in JavaScript. Markup lives in each feature's `views/*.ejs`; presenters return `{ view, model }` and nothing else; controllers render through `shared/render-view.js`, so neither layer imports EJS. Escaping is EJS's `<%= %>` — don't hand-roll it.
+- No HTML or CSS in JavaScript. Markup lives in each feature's `views/*.ejs`; presenters return `{ view, model }` and nothing else; controllers render through `shared/render-view.js`, so neither layer imports EJS. Escaping is EJS's `<%= %>` — don't hand-roll it. Every page opens with `include("_head", { title })` and closes with `include("_foot")`.
+- `shared/view-engine.js` sets each app's views to `[featureViews, sharedViews]`. It also mirrors that list into `app.locals.views` — Express does not forward its views setting to the template engine, and EJS resolves `include()` from `options.views`. Removing that line silently breaks every `include("_head")`.
 - `domain` and `use-case` files import no `express`, no `xml-crypto`, no `@node-saml/node-saml`. Ports are declared as JSDoc `@typedef` at the top of the use case that needs them; implementations live in `*.gateway.js`, `*-signer.js`, `*-store.js`, `*.client.js`.
 - Each feature's `index.js` is its local wiring point — the only file that swaps a port for a concrete implementation.
 - `src/server.js` starts the IdP first, then the SP fetches `GET /idp/metadata` to import the IdP's signing certificate. That order is the trust-establishment order and is the point of the demo; don't collapse it into a shared module.

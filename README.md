@@ -103,6 +103,7 @@ src/features/identity-provider/ IdP：用户目录、SP 注册表、Assertion �
               └── views/        EJS 模板：登录页、自动提交表单
 src/features/service-provider/  SP：SSO 发起、SAMLResponse 校验、会话
               └── views/        EJS 模板：首页、已登录页
+src/shared/views/               公共 layout：_head.ejs、_foot.ejs
 src/shared/public/demo.css      两个服务共用的样式表
 scripts/e2e.js                  端到端测试
 demo.js                         离线版
@@ -110,6 +111,8 @@ demo.js                         离线版
 
 HTML 全部在 `views/*.ejs` 里，presenter 只负责挑模板和准备数据（`{ view, model }`），
 controller 通过 `shared/render-view.js` 渲染，因此业务代码里没有 HTML 字符串。
+每个页面以 `include("_head", { title })` 开头、`include("_foot")` 结尾，
+公共 layout 放在 `src/shared/views/`，两个服务共用。
 
 ## 生产环境的差异
 

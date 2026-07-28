@@ -5,6 +5,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 
 const { STATIC_ASSETS_DIR } = require("../../shared/static-assets");
+const { useEjsViews } = require("../../shared/view-engine");
 const { createHttpErrorHandler } = require("../../shared/http-error-handler");
 const { StartSingleSignOnUseCase } = require("./start-single-sign-on.use-case");
 const { CompleteSingleSignOnUseCase } = require("./complete-single-sign-on.use-case");
@@ -26,8 +27,7 @@ function createServiceProviderApp({ config, identityProvider }) {
 
     const app = express();
 
-    app.set("view engine", "ejs");
-    app.set("views", path.join(__dirname, "views"));
+    useEjsViews(app, path.join(__dirname, "views"));
 
     app.use(express.static(STATIC_ASSETS_DIR));
     app.use(express.urlencoded({ extended: false }));
