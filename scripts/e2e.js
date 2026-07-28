@@ -120,11 +120,12 @@ function readAttribute(html, pattern) {
     return decodeHtmlEntities(match[1]);
 }
 
+// EJS 的 <%= %> 会把 " 转成 &#34;、' 转成 &#39;。
 function decodeHtmlEntities(value) {
     return value
         .replace(/&lt;/g, "<")
         .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
+        .replace(/&(?:quot|#34);/g, '"')
         .replace(/&#39;/g, "'")
         .replace(/&amp;/g, "&");
 }

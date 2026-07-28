@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <title>正在跳转回 SP</title>
+    <link rel="stylesheet" href="/demo.css">
+</head>
+<body>
+
+<h1>IdP 已签发 SAMLResponse</h1>
+
+<p>HTTP-POST 绑定：IdP 无法直接调用 SP，只能让浏览器把 SAMLResponse
+    POST 到 <code><%= assertionConsumerServiceUrl %></code></p>
+
+<form id="saml-post-form" method="post" action="<%= assertionConsumerServiceUrl %>">
+    <input type="hidden" name="SAMLResponse" value="<%= samlResponseBase64 %>">
+    <input type="hidden" name="RelayState" value="<%= relayState %>">
+    <noscript><button type="submit">继续</button></noscript>
+</form>
+
+<script>document.getElementById("saml-post-form").submit();</script>
+
+</body>
+</html>

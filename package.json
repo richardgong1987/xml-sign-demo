@@ -13,6 +13,7 @@
     "@node-saml/node-saml": "5.1.0",
     "@xmldom/xmldom": "0.9.10",
     "cookie-parser": "^1.4.7",
+    "ejs": "^6.0.1",
     "express": "^5.2.1",
     "selfsigned": "^5.5.0",
     "xml-crypto": "6.1.2",

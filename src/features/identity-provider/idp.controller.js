@@ -2,9 +2,10 @@
 
 const express = require("express");
 
+const { renderView } = require("../../shared/render-view");
 const { listUsers } = require("./user-directory");
 const { parseRedirectBindingAuthnRequest } = require("./authn-request.parser");
-const { renderLoginPage, renderAutoPostForm } = require("./idp.presenter");
+const { toLoginPageView, toAutoPostFormView } = require("./idp.presenter");
 const { tamperWithRole } = require("./tampering.simulator");
 
 /**
@@ -22,8 +23,9 @@ function createIdentityProviderRouter({ issueSamlResponse, metadataXml }) {
     router.get("/idp/sso", (request, response) => {
         const authnRequest = parseRedirectBindingAuthnRequest(request.query.SAMLRequest);
 
-        response.type("text/html").send(
-            renderLoginPage({
+        renderView(
+            response,
+            toLoginPageView({
                 authnRequest,
                 relayState: request.query.RelayState ?? "",
                 users: listUsers(),
@@ -36,8 +38,9 @@ function createIdentityProviderRouter({ issueSamlResponse, metadataXml }) {
             toIssueSamlResponseCommand(request.body),
         );
 
-        response.type("text/html").send(
-            renderAutoPostForm({
+        renderView(
+            response,
+            toAutoPostFormView({
                 assertionConsumerServiceUrl,
                 samlResponse: isTamperRequested(request.body)
                     ? tamperWithRole(samlResponse)

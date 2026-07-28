@@ -100,10 +100,16 @@ docs/design/saml-sso-http.md    设计文档：边界、依赖方向、测试策
 src/config.js                   两端的 Entity ID、地址、有效期
 src/server.js                   组装根：先起 IdP，再让 SP 导入 metadata
 src/features/identity-provider/ IdP：用户目录、SP 注册表、Assertion 签名
+              └── views/        EJS 模板：登录页、自动提交表单
 src/features/service-provider/  SP：SSO 发起、SAMLResponse 校验、会话
+              └── views/        EJS 模板：首页、已登录页
+src/shared/public/demo.css      两个服务共用的样式表
 scripts/e2e.js                  端到端测试
 demo.js                         离线版
 ```
+
+HTML 全部在 `views/*.ejs` 里，presenter 只负责挑模板和准备数据（`{ view, model }`），
+controller 通过 `shared/render-view.js` 渲染，因此业务代码里没有 HTML 字符串。
 
 ## 生产环境的差异
 

@@ -84,8 +84,21 @@ application     issue-saml-response / start-single-sign-on / complete-single-sig
 adapters        idp.controller / sp.controller / idp.presenter / sp.presenter
                 authn-request.parser / idp-metadata.factory
 infrastructure  xml-crypto-assertion-signer / node-saml.gateway
-                idp-metadata.client / in-memory-session-store / express / cookie
+                idp-metadata.client / in-memory-session-store / express / ejs / cookie
 ```
+
+### 视图
+
+HTML 不写在 JavaScript 里。职责切成三层：
+
+```text
+presenter        决定用哪个模板、模板需要哪些数据，返回 { view, model }
+views/*.ejs      纯 HTML 模板，转义由 EJS 的 <%= %> 负责
+shared/public/   静态样式表，IdP 与 SP 各自挂到自己的根路径下
+```
+
+controller 通过 `shared/render-view.js` 调用模板引擎，因此 controller 与 presenter
+都不认识 EJS。换模板引擎时只需要改 `render-view.js` 和两个 feature 的组装点。
 
 Port 用 JSDoc `@typedef` 声明在使用它的 use case 文件顶部。JavaScript 没有
 interface 关键字，为一个只有一两个方法的 port 单独建文件只会增加跳转成本。

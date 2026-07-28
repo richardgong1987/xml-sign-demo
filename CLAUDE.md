@@ -31,13 +31,15 @@ Feature-first, dependencies pointing inward. Both features are flat folders — 
 ```
 src/config.js      entity IDs, URLs, lifetimes — the only place ports/hosts appear
 src/server.js      composition root
-src/shared/        clock, SAML id, HTML escaping, X.509 PEM helpers, demo credential
-src/features/identity-provider/   *.factory (domain) → *.use-case → *.controller/*.presenter
-src/features/service-provider/    authenticated-user (domain) → *.use-case → *.controller/*.presenter
+src/shared/        clock, SAML id, X.509 PEM helpers, demo credential, render-view
+src/shared/public/ demo.css — served statically by both apps
+src/features/identity-provider/   *.factory (domain) → *.use-case → *.controller/*.presenter → views/*.ejs
+src/features/service-provider/    authenticated-user (domain) → *.use-case → *.controller/*.presenter → views/*.ejs
 ```
 
 Rules that hold across the codebase:
 
+- No HTML or CSS in JavaScript. Markup lives in each feature's `views/*.ejs`; presenters return `{ view, model }` and nothing else; controllers render through `shared/render-view.js`, so neither layer imports EJS. Escaping is EJS's `<%= %>` — don't hand-roll it.
 - `domain` and `use-case` files import no `express`, no `xml-crypto`, no `@node-saml/node-saml`. Ports are declared as JSDoc `@typedef` at the top of the use case that needs them; implementations live in `*.gateway.js`, `*-signer.js`, `*-store.js`, `*.client.js`.
 - Each feature's `index.js` is its local wiring point — the only file that swaps a port for a concrete implementation.
 - `src/server.js` starts the IdP first, then the SP fetches `GET /idp/metadata` to import the IdP's signing certificate. That order is the trust-establishment order and is the point of the demo; don't collapse it into a shared module.

@@ -2,7 +2,8 @@
 
 const express = require("express");
 
-const { renderHomePage, renderProfilePage } = require("./sp.presenter");
+const { renderView } = require("../../shared/render-view");
+const { toHomePageView, toProfilePageView } = require("./sp.presenter");
 
 const SESSION_COOKIE = "sp_session";
 
@@ -27,7 +28,7 @@ function createServiceProviderRouter(dependencies) {
     const router = express.Router();
 
     router.get("/", (request, response) => {
-        response.type("text/html").send(renderHomePage());
+        renderView(response, toHomePageView());
     });
 
     router.get("/login", async (request, response) => {
@@ -58,7 +59,7 @@ function createServiceProviderRouter(dependencies) {
             return;
         }
 
-        response.type("text/html").send(renderProfilePage(authenticatedUser));
+        renderView(response, toProfilePageView(authenticatedUser));
     });
 
     router.post("/logout", (request, response) => {

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <title>Demo OpenAM 登录</title>
+    <link rel="stylesheet" href="/demo.css">
+</head>
+<body>
+
+<h1>Demo OpenAM（IdP）</h1>
+
+<p>已收到来自 SP 的 AuthnRequest：</p>
+<ul>
+    <li>SP Entity ID：<code><%= serviceProviderEntityId %></code></li>
+    <li>Request ID：<code><%= authnRequestId %></code></li>
+    <li>RelayState：<code><%= relayState || "（空）" %></code></li>
+</ul>
+
+<form method="post" action="/idp/login">
+    <input type="hidden" name="authnRequestId" value="<%= authnRequestId %>">
+    <input type="hidden" name="serviceProviderEntityId" value="<%= serviceProviderEntityId %>">
+    <input type="hidden" name="relayState" value="<%= relayState %>">
+
+    <h2>选择演示用户</h2>
+    <ul>
+        <% users.forEach((user) => { %>
+        <li>
+            <button type="submit" name="uid" value="<%= user.uid %>">
+                以 <%= user.uid %> 登录（role=<%= user.role %>）
+            </button>
+        </li>
+        <% }) %>
+    </ul>
+
+    <label>
+        <input type="checkbox" name="tamper" value="on">
+        模拟中间人：签名之后把 role 改成 administrator
+    </label>
+</form>
+
+</body>
+</html>
