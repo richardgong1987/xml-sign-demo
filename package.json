@@ -5,11 +5,16 @@
   "description": "A direct method-call demo showing how @node-saml/node-saml uses xml-crypto.",
   "type": "commonjs",
   "scripts": {
-    "demo": "node demo.js"
+    "start": "node src/server.js",
+    "demo": "node demo.js",
+    "e2e": "node scripts/e2e.js"
   },
   "dependencies": {
     "@node-saml/node-saml": "5.1.0",
     "@xmldom/xmldom": "0.9.10",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "selfsigned": "^5.5.0",
     "xml-crypto": "6.1.2",
     "xpath": "0.0.34"
   },
