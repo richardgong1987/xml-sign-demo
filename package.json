@@ -1,47 +1,24 @@
 {
-  "name": "saml-sso-nestjs-demo",
+  "name": "saml-sso-demo",
   "version": "1.0.0",
   "private": true,
-  "description": "A NestJS demo of SAML 2.0 SSO, showing how an IdP and an SP cooperate and how @node-saml/node-saml uses xml-crypto.",
+  "description": "A SAML 2.0 SSO demo: a NestJS identity provider and a Next.js service provider, cooperating over HTTP.",
+  "workspaces": [
+    "apps/*",
+    "e2e"
+  ],
   "scripts": {
-    "build": "nest build",
-    "start:idp": "nest start --entryFile identity-provider/main",
-    "start:sp": "nest start --entryFile service-provider/main",
-    "start:idp:dev": "nest start --watch --entryFile identity-provider/main",
-    "start:sp:dev": "nest start --watch --entryFile service-provider/main",
-    "start:idp:prod": "node dist/identity-provider/main",
-    "start:sp:prod": "node dist/service-provider/main",
-    "test": "jest",
-    "test:unit": "jest --testPathPatterns \"src/.*\\.spec\\.ts$\"",
-    "test:e2e": "jest --testPathPatterns \"test/.*\\.e2e-spec\\.ts$\""
-  },
-  "dependencies": {
-    "@nestjs/common": "^11.1.28",
-    "@nestjs/core": "^11.1.28",
-    "@nestjs/jwt": "^11.0.2",
-    "@nestjs/platform-express": "^11.1.28",
-    "@node-saml/node-saml": "5.1.0",
-    "@xmldom/xmldom": "0.9.10",
-    "ejs": "^6.0.1",
-    "express": "^5.2.1",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "selfsigned": "^5.5.0",
-    "xml-crypto": "6.1.2",
-    "xpath": "0.0.34"
+    "build": "npm run build --workspaces --if-present",
+    "start:idp": "npm run start --workspace @saml-demo/identity-provider",
+    "start:sp": "npm run start --workspace @saml-demo/service-provider",
+    "dev:idp": "npm run start:dev --workspace @saml-demo/identity-provider",
+    "dev:sp": "npm run dev --workspace @saml-demo/service-provider",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "npm run test --workspace @saml-demo/identity-provider && npm run test --workspace @saml-demo/service-provider",
+    "test:e2e": "npm run test --workspace @saml-demo/e2e",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "engines": {
     "node": ">=24"
-  },
-  "devDependencies": {
-    "@nestjs/cli": "^11.0.24",
-    "@nestjs/testing": "^11.1.28",
-    "@types/ejs": "^3.1.5",
-    "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^26.1.2",
-    "jest": "^30.4.2",
-    "ts-jest": "^29.4.12",
-    "typescript": "^5.9.3"
   }
 }

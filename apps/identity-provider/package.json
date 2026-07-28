@@ -1,0 +1,38 @@
+{
+  "name": "@saml-demo/identity-provider",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo OpenAM — the SAML identity provider, on NestJS.",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "@xmldom/xmldom": "0.9.10",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "selfsigned": "^5.5.0",
+    "xml-crypto": "6.1.2",
+    "xpath": "0.0.34"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.1.28",
+    "@types/ejs": "^3.1.5",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.1.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.9.3"
+  }
+}

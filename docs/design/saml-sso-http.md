@@ -88,70 +88,74 @@ production SP would retry, or load the metadata from a file deployed alongside i
 
 ## 7. Architecture Boundary
 
-The first boundary is "two independent applications"; technical layering comes second.
-Each is deployable on its own — its own `main.ts`, its own config module, its own
-command line — and neither imports anything from the other. They cooperate over HTTP
-alone.
+The first boundary is "two independently deployable applications"; technical layering
+comes second. Each is its own npm workspace with its own dependencies, build and entry
+point, and neither imports anything from the other. They cooperate over HTTP alone.
+
+They deliberately run on different stacks — the IdP on NestJS, the SP on Next.js —
+because SAML is an interoperability protocol. If the demo were built twice on the same
+framework it would be easy to mistake a shared convention for part of the protocol.
 
 ```text
-src/identity-provider/          src/service-provider/
-├── main.ts (--port, --sp-url)  ├── main.ts (--port, --idp-url)
-├── *.config.ts                 ├── *.config.ts
-├── models/                     ├── models/
-│   user-directory              │   authenticated-user
-│   service-provider-registry   │
-│   saml-response.factory       │
-│   idp-metadata.factory        │
-├── services/                   ├── services/
-│   issue-saml-response (UC)    │   start-single-sign-on (UC)
-│   xml-crypto-assertion-signer │   complete-single-sign-on (UC)
-│   authn-request.parser        │   node-saml.gateway
-│   signing-credential          │   jwt-access-token.issuer
-│   tampering.simulator         │   idp-metadata.client
-├── controllers/                ├── controllers/
-├── presenters/                 ├── presenters/
-├── views/                      ├── views/
-└── *.module.ts (bindings)      └── *.module.ts (bindings)
-
-src/shared/     Clock port, exception filter, view layer, X.509, createWebApplication
+apps/identity-provider/ (NestJS)     apps/service-provider/ (Next.js)
+├── src/main.ts (--port, --sp-url)   ├── app/                 pages + route handlers
+├── src/identity-provider.config.ts  ├── src/config/          env-driven configuration
+├── src/models/                      ├── src/domain/
+│   user-directory                   │   authenticated-user
+│   service-provider-registry        ├── src/services/
+│   saml-response.factory            │   start-single-sign-on (UC)
+│   idp-metadata.factory             │   complete-single-sign-on (UC)
+├── src/services/                    │   node-saml.gateway
+│   issue-saml-response (UC)         │   jose-access-token.issuer
+│   xml-crypto-assertion-signer      │   idp-metadata.client
+│   authn-request.parser             ├── src/presenters/
+│   signing-credential               ├── src/token-handoff.page.ts
+│   tampering.simulator              └── src/service-provider.runtime.ts
+├── src/controllers/ presenters/ views/
+├── src/shared/                          e2e/  builds and runs both, drives with fetch
+└── src/identity-provider.module.ts
 ```
 
 Configuration is split along the same seam. The IdP is told which service providers it
 may issue assertions for (`--sp-url`, registration data an administrator would supply);
-the SP is told where to fetch trust (`--idp-url`). Neither has a flag for the other's
+the SP is told where to fetch trust (`IDP_BASE_URL`). Neither has a knob for the other's
 port, because neither owns it.
 
-Nothing in `src/` starts both applications. The end-to-end suite needs them together,
-so that orchestration lives in `test/start-both-applications.ts` and nowhere else.
+Nothing in either application starts both. The end-to-end suite needs them together, so
+that orchestration lives in `e2e/run-applications.ts` and nowhere else.
 
-Ports are abstract classes (`Clock`, `AssertionSigner`, `SamlGateway`, `AccessTokenIssuer`).
-They survive compilation, so they double as injection tokens, and a use case can depend
-on the abstraction while only the module names an implementation. Values that have no
-class to hang off — configuration objects, the metadata string — use symbol tokens,
-because a TypeScript interface does not exist at runtime.
+### The same architecture on two frameworks
+
+The SP's `src/` moved over from the NestJS version almost unchanged. That is the whole
+point of keeping use cases free of framework imports — and it is also the clearest
+evidence that the boundaries are real rather than decorative. What had to change was
+only the outermost layer:
+
+| | NestJS | Next.js |
+| --- | --- | --- |
+| Wiring | DI container, `*.module.ts` | one memoised factory |
+| Ports | abstract classes (need a runtime token) | plain interfaces |
+| Routing | `@Controller` + `@Get` | `app/**/route.ts` |
+| Views | EJS + presenters | React server and client components |
+| JWT | `@nestjs/jwt` | `jose` |
+| Configuration | `parseArgs` flags | environment variables |
+| Auth check | `CanActivate` guard | a function each handler calls |
+| Trust import | async provider, resolved at boot | memoised promise, resolved on first use |
+
+Two consequences worth knowing about:
+
+- Nest could enforce "this use case may only see ports" through the container. Next
+  cannot, so the same rule is now a convention: `src/` imports nothing from `next`, and
+  `app/` holds no business logic.
+- A Next route handler may not import `react-dom/server`, so the hand-off document is
+  built as a string in `token-handoff.page.ts` with its own escaping, rather than as a
+  React component.
 
 Within an application, which layer a file belongs to depends on what makes it change:
-a business rule goes to `models/`, a workflow or an external library to `services/`,
-the wire protocol to `controllers/`, page output to `presenters/` and `views/`, and
-swapping an implementation to the module.
-
-### Views
-
-No HTML lives in TypeScript. The responsibility splits three ways:
-
-```text
-<app>/presenters/   turns a use-case result into exactly the data one template needs
-<app>/views/        that application's page templates; EJS's <%= %> does the escaping
-shared/views/       common layout: _head.ejs and _foot.ejs
-shared/public/      stylesheet, mounted at the root of both applications
-```
-
-A controller names its template with `@Render("login")` and returns the model, so no
-controller ever touches the view engine. `shared/web-layer.ts` sets each application's
-view directories to `[the application's own views, shared/views]`: pages resolve inside
-the application, and `include("_head")` falls back to the common layout. Note that
-Express never forwards its views setting to the template engine, so the same list must
-also be written to `app.locals.views` for EJS to see it when resolving includes.
+a business rule goes to `models/` or `domain/`, a workflow or an external library to
+`services/`, the wire protocol to `controllers/` or `app/**/route.ts`, page output to
+`presenters/` and the templates, and swapping an implementation to the module or the
+runtime factory.
 
 ## 8. Dependencies
 
@@ -168,68 +172,60 @@ adapter files under `services/`, in `controllers/`, and in the module files.
 
 ## 9. External Details
 
-- `@nestjs/core` / `@nestjs/platform-express`: HTTP transport and DI.
-- `ejs`: page templates.
+- `@nestjs/core` / `@nestjs/platform-express`: HTTP transport and DI, IdP side.
+- `ejs`: page templates, IdP side.
+- `next` / `react`: HTTP transport and pages, SP side.
+- `jose`: signs and verifies the SP's own access tokens (HS256).
 - `xml-crypto`: XML canonicalization, digests, RSA signing and verification.
 - `@node-saml/node-saml`: AuthnRequest generation, SAMLResponse validation, SP metadata.
 - `selfsigned`: mints the IdP's self-signed X.509 certificate at startup.
-- `@nestjs/jwt`: signs and verifies the SP's own access tokens (HS256).
 - Sign-in state: none on the server; the browser holds a JWT in localStorage.
 - Runtime: Node.js >= 24, ES Modules (`"type": "module"`), `import.meta.dirname` for
   path resolution.
 
 ## 10. Test Strategy
 
-`npm test` runs both layers in one go: 64 cases on Jest with `ts-jest`.
+`npm test` runs both layers: 47 unit cases across the two workspaces, then 16
+end-to-end.
 
-Unit specs sit next to the code they cover (`src/**/*.spec.ts`) and need no HTTP, keys,
-or database. Those covering a Nest provider build their subject with
-`Test.createTestingModule`, binding fakes to the very same ports the production module
-binds real implementations to:
+Unit specs sit next to the code they cover and need no HTTP, keys, or database.
+The IdP is a Nest application, so specs that exercise a provider build it with
+`Test.createTestingModule`, binding fakes to the same tokens the production module binds
+real implementations to. The SP has no container, so a fake is an object literal and the
+subject is constructed directly — the same test, one indirection lighter.
 
 - `saml-response.factory`: validity window under a fixed `issuedAt`, Audience,
   Destination, `InResponseTo` echoing, attribute mapping.
 - `user-directory` / `service-provider-registry`: unknown entries raise domain errors,
   and the `Map` behind the directory keeps prototype members out.
 - `authn-request.parser`: namespace-prefix independence, whitespace around a
-  pretty-printed Issuer, and every rejection path (missing parameter, non-deflate
-  payload with the zlib failure kept as `cause`, non-XML payload, missing ID or Issuer,
-  a well-formed message that is not an AuthnRequest).
+  pretty-printed Issuer, and every rejection path.
 - `authenticated-user`: refuses creation without a NameID, immutable afterwards.
-- `IssueSamlResponseUseCase`: with a fake `AssertionSigner` and a fixed `Clock`,
-  asserts the delivery address comes from the registry, the time comes from the
-  injected clock, and invalid input never reaches the signing step.
+- `IssueSamlResponseUseCase`: with a fake `AssertionSigner` and a fixed `Clock`, asserts
+  the delivery address comes from the registry and invalid input never reaches signing.
 - `CompleteSingleSignOnUseCase`: with a fake `SamlGateway` and `AccessTokenIssuer`,
   asserts the RelayState off-site fallback and that a failed validation mints no token.
-- `JwtAccessTokenIssuer`: round-trips the identity, and refuses a token signed with a
-  different secret, edited after signing, or past its expiry.
+- `createJoseAccessTokenIssuer`: round-trips the identity, and refuses a token signed
+  with a different secret, edited after signing, or past its expiry.
 
-End to end (`test/single-sign-on.e2e-spec.ts`) calls `startSamlDemo()` to boot both Nest
-applications for real and drives them with a cookie-keeping `fetch` acting as a browser,
-asserting each hop: metadata exchange, AuthnRequest generation and parsing, issuing and
-delivery, token hand-off, `/api/me` with and without a valid bearer token, plus the
-rejection paths
-(man-in-the-middle tampering -> `Invalid signature`; replay -> `InResponseTo is not
-valid`; malformed AuthnRequest -> 400).
+End to end (`e2e/`) is the only package that runs both applications. Its `globalSetup`
+builds each workspace, spawns `node apps/identity-provider/dist/main.js` and
+`next start`, waits for both to answer, and the specs drive them with `fetch`: metadata
+exchange, AuthnRequest generation and parsing, issuing and delivery, token hand-off,
+`/api/me` with and without a valid bearer token, plus four rejection paths
+(tampering, replay, malformed AuthnRequest, edited JWT payload).
 
-The end-to-end suite listens on ports 14000/15000, so it can run while `npm start` is up.
+It listens on 14000/15000, so it can run while a development server is up, and it uses
+a fixed `SP_ACCESS_TOKEN_SECRET` so a token minted in one spec is still verifiable in
+the next.
 
-One Jest caveat worth knowing: its `node` environment isolates realms, so an error
-raised inside a Node core module is not `instanceof Error` in a spec. Assertions about a
-preserved `cause` check its shape rather than its constructor.
+Two things it does not cover:
 
-### Sign-in state
-
-The SP holds no session. Once the assertion validates, `CompleteSingleSignOnUseCase`
-asks the `AccessTokenIssuer` port for a token and the ACS renders a hand-off page: the
-IdP POSTed from its own origin, so only a script on the SP origin can write to the SP's
-localStorage. Every later call carries `Authorization: Bearer <jwt>`, and
-`BearerTokenGuard` answers the only question that matters — does the signature verify
-and is the token still live.
-
-The algorithm is pinned on both sides (`signOptions.algorithm` and
-`verifyOptions.algorithms`). Accepting whatever the token's own header claims is the
-classic JWT confusion bug.
+- That the hand-off script actually runs and writes localStorage. Verifying that needs a
+  real browser; Playwright would be the next step.
+- Jest's `node` environment isolates realms, so an error raised inside a Node core
+  module is not `instanceof Error` in a spec. Assertions about a preserved `cause` check
+  its shape rather than its constructor.
 
 ## 11. Risks and Trade-offs
 
@@ -257,8 +253,13 @@ classic JWT confusion bug.
 - The SP has a hard startup dependency on the IdP being reachable. That makes the trust
   import visible, which is the teaching goal, but it is not how a production SP should
   behave: it should retry, cache, or read metadata from disk.
-- NestJS adds a build step and a sizeable dependency tree to what was a
-  dependency-light demo. The trade is that the DI container now enforces the wiring
-  rules the architecture describes — a use case cannot reach an implementation it was
-  not given — and the trust import became an async provider rather than hand-ordered
-  startup code.
+- Running two frameworks doubles the dependency tree and the amount of build tooling a
+  reader has to understand. The trade is that the boundary between "our architecture"
+  and "what the framework wants" becomes impossible to miss: the same use cases run
+  unchanged under a DI container and under a plain factory.
+- On the Next side nothing enforces the dependency rule any more. Nest could refuse to
+  inject what a use case was not given; here `src/` importing from `next` would simply
+  compile. The rule survives as a convention and a review habit.
+- The SP no longer fails fast when the IdP is unreachable — it starts and fails on the
+  first SSO request instead, because Next offers no dependable boot hook. Production
+  would retry, cache, or read metadata from disk.

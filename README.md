@@ -1,7 +1,13 @@
 # SAML SSO Demo: how an IdP and an SP cooperate
 
-Two NestJS applications playing both sides of a SAML 2.0 single sign-on, so you can
-watch the handshake happen in a browser.
+Two applications playing both sides of a SAML 2.0 single sign-on, so you can watch the
+handshake happen in a browser:
+
+- **Demo OpenAM** — the identity provider, on **NestJS**
+- **JSL-online** — the service provider, on **Next.js**
+
+Deliberately different stacks: SAML is an interoperability protocol, and the two sides
+share nothing but HTTP.
 
 IdP and SP are two **separately deployable applications**, each with its own entry
 point, its own configuration, and its own command line. Start them in two terminals.
@@ -11,39 +17,61 @@ point, its own configuration, and its own command line. Start them in two termin
 - Node.js 24 or newer
 - npm
 
-TypeScript throughout, compiled by `nest build`. Ports are resolved with
-`import.meta`-free CommonJS output, and the code uses `node:util`'s `styleText` and
-`parseArgs`, `AbortSignal.timeout()`, and `RegExp.escape()` — hence the Node 24 floor.
+TypeScript throughout. An npm workspace per application, so neither drags the other's
+dependencies along:
+
+```text
+apps/identity-provider   NestJS + EJS + xml-crypto      (nest build)
+apps/service-provider    Next.js + React + jose         (next build)
+e2e                      the only package that runs both at once
+```
+
+The code uses `node:util`'s `styleText` and `parseArgs`, `AbortSignal.timeout()`, and
+`RegExp.escape()` — hence the Node 24 floor.
 
 ## Running it
 
 ```bash
 npm install
+npm run build         # nest build + next build
 
 npm run start:idp     # terminal 1 — Demo OpenAM on :4000
 npm run start:sp      # terminal 2 — JSL-online on :3000
 ```
 
+For iterating, `npm run dev:idp` and `npm run dev:sp` watch and reload instead.
+
 Then open <http://localhost:3000> and click "Sign in through Demo OpenAM".
 
-**Start the IdP first.** The SP imports the signing certificate while its module
-initialises, so starting it alone exits with a clear message rather than coming up
-half-configured:
+**Start the IdP first.** The SP imports the signing certificate the first time SSO is
+used. Next gives no reliable "the server is booting" hook — a route handler may be the
+first thing that runs — so unlike the Nest version the SP starts happily on its own and
+fails on the first request instead:
 
 ```
-Cannot read the IdP metadata: http://localhost:4000/idp/metadata is unreachable
+SP rejected the request: Cannot read the IdP metadata: http://localhost:4000/idp/metadata is unreachable
 ```
 
-Each application takes its own options — neither has a flag for the other's port,
-because neither owns it:
+The fetch is memoised, so it happens once per process and every later request reuses the
+same trust.
+
+Each application takes its own configuration — neither has a knob for the other's port,
+because neither owns it. The IdP takes command-line flags; Next has nowhere to hang
+those, so the SP reads the environment:
 
 ```bash
 npm run start:idp -- --port 4001 --sp-url http://localhost:3001
-npm run start:sp  -- --port 3001 --idp-url http://localhost:4001
+
+SP_BASE_URL=http://localhost:3001 \
+IDP_BASE_URL=http://localhost:4001 \
+SP_ACCESS_TOKEN_SECRET=change-me-in-production \
+  npm run start:sp -- --port 3001
 ```
 
 `--sp-url` is registration data: the IdP will only issue assertions for a service
-provider it has been told about. `--idp-url` is where the SP goes to fetch trust.
+provider it has been told about. `IDP_BASE_URL` is where the SP goes to fetch trust.
+`SP_ACCESS_TOKEN_SECRET` signs the SP's own JWTs — without it the SP mints a random one
+per process, which is fine for one machine and wrong for anything with two instances.
 
 ### Endpoints
 
@@ -67,24 +95,23 @@ exactly once, over one HTTP call, and it is the only channel between the two:
 
 ```mermaid
 graph LR
-    subgraph IDP["IdP · Demo OpenAM · :4000"]
+    subgraph IDP["IdP · Demo OpenAM · NestJS · :4000"]
         KEY["RSA private key<br/>signs every Assertion<br/>never leaves this process"]
         MD["GET /idp/metadata<br/>entity ID · SSO URL · certificate"]
         KEY --> MD
     end
 
-    subgraph SPX["SP · JSL-online · :3000"]
+    subgraph SPX["SP · JSL-online · Next.js · :3000"]
         TRUST["idpCert<br/>node-saml verifies with this"]
         SECRET["JWT secret<br/>never leaves this process"]
     end
 
-    MD -->|"fetched while the SP boots"| TRUST
+    MD -->|"fetched once, on first use"| TRUST
 ```
 
-`ServiceProviderModule` declares that certificate as an **async provider**, so the SP
-application cannot finish initialising until the fetch succeeds. Start the SP with the
-IdP down and it exits instead of coming up half-configured. **The SP never touches the
-IdP private key, and the IdP never learns the SP's JWT secret.**
+The SP's composition root (`src/service-provider.runtime.ts`) memoises that fetch, so
+the certificate is imported once per process. **The SP never touches the IdP private
+key, and the IdP never learns the SP's JWT secret.**
 
 ### 2. Signing in
 
@@ -92,8 +119,8 @@ IdP private key, and the IdP never learns the SP's JWT secret.**
 sequenceDiagram
     autonumber
     actor U as Browser
-    participant SP as SP · JSL-online<br/>:3000
-    participant IDP as IdP · Demo OpenAM<br/>:4000
+    participant SP as SP · JSL-online<br/>Next.js :3000
+    participant IDP as IdP · Demo OpenAM<br/>NestJS :4000
 
     U->>SP: GET /profile
     SP-->>U: shell page only, the server holds no session
@@ -119,10 +146,12 @@ sequenceDiagram
     SP-->>U: 200 with the profile
 ```
 
-Step 12 needs a page rather than a redirect: the IdP POSTed from **its** origin, so only
-a script served by the SP can write to the SP's localStorage.
+The hand-off needs a page rather than a redirect: the IdP POSTed from **its** origin, so
+only a script served by the SP can write to the SP's localStorage. The token stays in
+the response body rather than a `Location` header, which proxies and access logs keep.
 
 ```html
+<!-- src/token-handoff.page.ts, returned by POST /api/saml/acs -->
 <div id="token-handoff" data-access-token="…" data-return-to="/profile"></div>
 <script>
     const handoff = document.getElementById("token-handoff").dataset;
@@ -130,6 +159,10 @@ a script served by the SP can write to the SP's localStorage.
     location.replace(handoff.returnTo);
 </script>
 ```
+
+It is a plain string rather than a React component because Next refuses to let a route
+handler import `react-dom/server`, and this document is deliberately outside the app
+layout — it is visible for a few milliseconds and should not wait on a bundle.
 
 ### 3. Staying signed in
 
@@ -166,7 +199,7 @@ stateDiagram-v2
 sequenceDiagram
     autonumber
     actor U as Browser
-    participant SP as SP · JSL-online<br/>:3000
+    participant SP as SP · JSL-online<br/>Next.js :3000
 
     U->>U: localStorage.removeItem sp_access_token
     U->>SP: GET /
@@ -186,35 +219,37 @@ browser to POST. The SP's ACS answers `Invalid signature` and issues no token.
 ## Tests
 
 ```bash
-npm test           # all 64 cases
-npm run test:unit  # models and services only, no HTTP or keys needed
-npm run test:e2e   # end to end, boots both applications for real
+npm test           # everything: 47 unit + 16 end-to-end
+npm run test:unit  # both workspaces, no HTTP or keys needed
+npm run test:e2e   # builds and starts both applications for real
 ```
 
-Jest with `ts-jest`. Unit specs sit next to the code they cover (`*.spec.ts`) and build
-their subject with `Test.createTestingModule`, binding fake implementations to the same
-ports the production module binds real ones to:
+Unit specs sit next to the code they cover. The IdP is a Nest app, so its specs build
+their subject with `Test.createTestingModule`; the SP has no DI container, so a fake is
+just an object literal:
 
 ```ts
-const moduleRef = await Test.createTestingModule({
-    providers: [
-        IssueSamlResponseUseCase,
-        UserDirectory,
-        ServiceProviderRegistry,
-        { provide: IDENTITY_PROVIDER_CONFIG, useValue: IDENTITY_PROVIDER },
-        { provide: AssertionSigner, useValue: recordingSigner },
-        { provide: Clock, useClass: FixedClock },
-    ],
-}).compile();
+const gateway: SamlGateway = {
+    async createLoginRedirectUrl(relayState) { relayStates.push(relayState); return "..."; },
+    validateSamlResponse() { throw new Error("not used in this test"); },
+    describeMetadata() { throw new Error("not used in this test"); },
+};
+
+await new StartSingleSignOnUseCase(gateway).execute({returnTo: "/profile"});
 ```
 
-The end-to-end suite (`test/single-sign-on.e2e-spec.ts`) needs both applications at
-once, which production never does, so `test/start-both-applications.ts` puts the pair in
-one process — the only place that orchestration exists. It then drives them with a
-cookie-keeping `fetch` acting as a browser, asserting each hop, and covers three
-rejection paths: man-in-the-middle tampering (`Invalid signature`), replaying the same
-SAMLResponse (`InResponseTo is not valid`), and a malformed AuthnRequest. It listens on
-ports 14000/15000, so it can run while a development server is up.
+The `e2e` package is the only code anywhere that runs both applications at once. Its
+`globalSetup` builds each workspace, spawns `node apps/identity-provider/dist/main.js`
+and `next start`, and waits for both to answer; the specs then drive them with `fetch`.
+Ports 14000/15000, so a development server can stay up.
+
+It covers the whole handshake plus four rejection paths: man-in-the-middle tampering
+(`Invalid signature`), a replayed SAMLResponse (`InResponseTo is not valid`), a
+malformed AuthnRequest, and a JWT whose payload was edited after signing.
+
+What it does *not* cover, in either the Nest or the Next version: that the hand-off
+script actually runs and writes localStorage. Verifying that needs a real browser —
+Playwright would be the next step.
 
 ## What the two libraries do
 
@@ -235,74 +270,68 @@ this login result is meant for us, is valid right now, and came from the IdP we 
 
 ## Layout
 
-IdP and SP are two independent Nest modules that never import each other — they
-cooperate over HTTP alone. Inside each, files are grouped by technical layer.
+IdP and SP are separate npm workspaces that never import each other — not a config file,
+not a constant. They cooperate over HTTP alone.
 
 ```text
-docs/design/saml-sso-http.md  design doc: boundaries, dependency direction, test strategy
+docs/design/saml-sso-http.md   design doc: boundaries, dependency direction, test strategy
 
-src/identity-provider/        Demo OpenAM — deployable on its own
-├── main.ts                   entry point: --port, --sp-url
-├── identity-provider.config.ts   its own configuration, including the SP registry
-├── models/                   user directory, SP registry, SAMLResponse and metadata factories
-├── services/                 issuing use case, xml-crypto signer, AuthnRequest parser,
-│                             signing credential
-├── controllers/              @Controller with @Render
-├── presenters/               use-case result -> view model
-├── views/                    login.ejs, auto-post.ejs
-└── identity-provider.module.ts   binds every port to an implementation
+apps/identity-provider/        Demo OpenAM — NestJS
+├── src/main.ts                entry point; --port, --sp-url
+├── src/identity-provider.config.ts    its config, including the SP registry
+├── src/models/                user directory, SP registry, SAMLResponse + metadata factories
+├── src/services/              issuing use case, xml-crypto signer, AuthnRequest parser
+├── src/controllers/           @Controller with @Render
+├── src/presenters/            use-case result -> view model
+├── src/views/                 login.ejs, auto-post.ejs
+├── src/shared/                Clock port, exception filter, view layer, X.509
+└── src/identity-provider.module.ts    binds every port to an implementation
 
-src/service-provider/         JSL-online — deployable on its own
-├── main.ts                   entry point: --port, --idp-url
-├── service-provider.config.ts    its own configuration
-├── models/                   authenticated-user.ts
-├── services/                 start/complete SSO use cases, node-saml, JWT issuer, metadata client
-├── controllers/
-├── presenters/
-├── views/                    home.ejs, store-token.ejs, profile.ejs
-└── service-provider.module.ts
+apps/service-provider/         JSL-online — Next.js
+├── app/                       App Router: pages and route handlers
+│   ├── page.tsx               home (server component)
+│   ├── profile/               shell page + the client component that verifies the token
+│   ├── login/route.ts         starts SSO
+│   └── api/
+│       ├── saml/metadata/     SP metadata
+│       ├── saml/acs/          validates the assertion, mints the JWT
+│       └── me/route.ts        the SP's own API, behind the bearer token
+└── src/                       everything that is not Next
+    ├── config/                reads SP_BASE_URL, IDP_BASE_URL, SP_ACCESS_TOKEN_SECRET
+    ├── domain/                authenticated-user.ts
+    ├── services/              use cases, node-saml gateway, jose issuer, metadata client
+    ├── presenters/            profile.presenter.ts
+    ├── service-provider.runtime.ts    the composition root
+    └── token-handoff.page.ts  the document that moves the JWT into localStorage
 
-src/shared/                   web plumbing neither application should reinvent
-├── clock.ts                  Clock port + SystemClock
-├── create-web-application.ts NestFactory + views + failure filter
-├── saml-failure.filter.ts    @Catch() filter: domain failure -> 400 + cause chain in the log
-├── web-layer.ts              view directories and static assets
-├── x509-certificate.ts       PEM <-> base64 body
-├── views/                    common layout: _head.ejs, _foot.ejs
-└── public/demo.css
-
-test/                         end-to-end suite + the only code that starts both at once
+e2e/                           builds and runs both, then drives them with fetch
 ```
 
-Neither application imports anything from the other — not a config file, not a
-constant. The IdP is told which service providers to trust; the SP is told where to
-fetch trust from. Everything else travels over HTTP.
+### What the two stacks share, and what they do not
 
-Which layer a file belongs to is decided by *what makes it change*:
+The SP's `src/` came across from the Nest version almost unchanged — use cases, the
+node-saml gateway, the metadata client, the domain model. That is the payoff of keeping
+them free of framework imports. What had to change was only the framework layer:
+
+| | NestJS | Next.js |
+| --- | --- | --- |
+| Wiring | DI container, `*.module.ts` | one memoised factory, `service-provider.runtime.ts` |
+| Ports | abstract classes (need a runtime token) | plain interfaces |
+| Routing | `@Controller` + `@Get` | `app/**/route.ts` |
+| Views | EJS templates + presenters | React server and client components |
+| JWT | `@nestjs/jwt` | `jose` |
+| Config | `parseArgs` flags | environment variables |
+| Auth check | `CanActivate` guard | a function each route handler calls |
+
+Which layer a file belongs to is still decided by *what makes it change*:
 
 | Directory | Reason to change |
 | --- | --- |
-| `models/` | a business rule changed |
-| `services/` | a workflow changed, or an external library or store was swapped |
-| `controllers/` | the wire protocol changed |
-| `presenters/`, `views/` | the page output changed |
-| `*.module.ts` | an implementation was swapped (the JWT issuer for an opaque-token one, say) |
-
-Ports are abstract classes, so they survive compilation and double as injection tokens:
-
-```ts
-export abstract class AssertionSigner {
-    abstract signAssertion(samlResponseXml: string): string;
-}
-
-// in the module — the only place an implementation is named
-{ provide: AssertionSigner, useClass: XmlCryptoAssertionSigner }
-```
-
-No HTML or CSS lives in TypeScript. Markup sits in each application's `views/*.ejs`,
-`@Render("login")` names the template, and a presenter turns the use-case result into
-exactly the data that template needs. Every page opens with
-`include("_head", { title })` and closes with `include("_foot")`.
+| `models/`, `domain/` | a business rule changed |
+| `services/` | a workflow changed, or an external library was swapped |
+| `controllers/`, `app/**/route.ts` | the wire protocol changed |
+| `presenters/`, `views/`, `app/**/page.tsx` | the page output changed |
+| `*.module.ts`, `service-provider.runtime.ts` | an implementation was swapped |
 
 ### What this costs
 
@@ -328,7 +357,10 @@ server-side session after all.
 - The JWT secret is minted fresh on every start, so a restart silently invalidates
   every token still sitting in a browser. Production reads a stable secret from a
   secret manager.
-- `SamlFailureFilter` returns the rejection reason to the browser so the demo is
-  readable. A production SP would show a generic page and keep the detail in the log.
+- Both sides return the rejection reason to the browser so the demo is readable. A
+  production SP would show a generic page and keep the detail in the log.
+- The SP's JWT secret falls back to a random per-process value. Anything running more
+  than one instance must set `SP_ACCESS_TOKEN_SECRET`, or a token minted by one instance
+  is rejected by the next.
 - `tampering.simulator.ts` is an attack simulation for teaching purposes and has no
   place in production code.
