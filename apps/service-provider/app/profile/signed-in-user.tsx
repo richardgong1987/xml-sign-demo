@@ -62,12 +62,12 @@ export function SignedInUser() {
 
             <table>
                 <tbody>
-                    {profile.fields.map((field) => (
-                        <tr key={field.label}>
-                            <td>{field.label}</td>
-                            <td>{field.value}</td>
-                        </tr>
-                    ))}
+                {profile.fields.map((field) => (
+                    <tr key={field.label}>
+                        <td>{field.label}</td>
+                        <td>{field.value}</td>
+                    </tr>
+                ))}
                 </tbody>
             </table>
 

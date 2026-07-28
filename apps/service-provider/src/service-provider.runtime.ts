@@ -1,4 +1,4 @@
-import {ServiceProviderConfig, readServiceProviderConfig} from "./config/service-provider.config";
+import {readServiceProviderConfig, ServiceProviderConfig} from "./config/service-provider.config";
 import {CompleteSingleSignOnUseCase} from "./services/complete-single-sign-on.use-case";
 import {fetchIdentityProviderTrust} from "./services/idp-metadata.client";
 import {createNodeSamlGateway} from "./services/node-saml.gateway";

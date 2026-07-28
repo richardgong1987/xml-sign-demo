@@ -9,7 +9,7 @@ export default function HomePage() {
         <>
             <h1>JSL-online (SP)</h1>
 
-            <TokenHint />
+            <TokenHint/>
 
             <p>
                 <a href="/login">Sign in through Demo OpenAM</a>

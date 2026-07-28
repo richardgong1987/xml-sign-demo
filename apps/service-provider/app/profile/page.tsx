@@ -8,7 +8,7 @@ export default function ProfilePage() {
     return (
         <>
             <h1>Signed in</h1>
-            <SignedInUser />
+            <SignedInUser/>
         </>
     );
 }

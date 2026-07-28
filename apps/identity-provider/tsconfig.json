@@ -2,19 +2,18 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2023",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "moduleResolution": "node",
-
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-
     "strict": true,
     "strictPropertyInitialization": false,
     "noImplicitOverride": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
-
     "outDir": "./dist",
     "baseUrl": "./",
     "sourceMap": true,
@@ -25,6 +24,11 @@
     "resolveJsonModule": true,
     "incremental": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

@@ -1,4 +1,4 @@
-import {ServiceProviderConfig, readServiceProviderConfig} from "../config/service-provider.config";
+import {readServiceProviderConfig, ServiceProviderConfig} from "../config/service-provider.config";
 import {AuthenticatedUser} from "../domain/authenticated-user";
 import {CompleteSingleSignOnUseCase} from "./complete-single-sign-on.use-case";
 import {JwtUtil} from "./jwt-util";

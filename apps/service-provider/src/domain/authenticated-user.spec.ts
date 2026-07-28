@@ -1,8 +1,4 @@
-import {
-    AuthenticatedUser,
-    createAuthenticatedUser,
-    InvalidAuthenticatedUserError,
-} from "./authenticated-user";
+import {AuthenticatedUser, createAuthenticatedUser, InvalidAuthenticatedUserError,} from "./authenticated-user";
 
 const VALID_PROFILE: AuthenticatedUser = {
     nameId: "hanjin",

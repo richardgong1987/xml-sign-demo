@@ -1,4 +1,4 @@
-import {SignJWT, jwtVerify} from "jose";
+import {jwtVerify, SignJWT} from "jose";
 
 import {ServiceProviderConfig} from "../config/service-provider.config";
 import {AuthenticatedUser, createAuthenticatedUser} from "../domain/authenticated-user";
