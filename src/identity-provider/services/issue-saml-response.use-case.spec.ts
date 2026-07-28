@@ -1,6 +1,6 @@
 import {Test} from "@nestjs/testing";
 
-import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../../config/saml.config";
+import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../identity-provider.config";
 import {Clock} from "../../shared/clock";
 import {ServiceProviderRegistry, UnregisteredServiceProviderError} from "../models/service-provider-registry";
 import {UnknownUserError, UserDirectory} from "../models/user-directory";

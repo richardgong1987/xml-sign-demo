@@ -5,9 +5,12 @@
   "description": "A NestJS demo of SAML 2.0 SSO, showing how an IdP and an SP cooperate and how @node-saml/node-saml uses xml-crypto.",
   "scripts": {
     "build": "nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:prod": "node dist/main",
+    "start:idp": "nest start --entryFile identity-provider/main",
+    "start:sp": "nest start --entryFile service-provider/main",
+    "start:idp:dev": "nest start --watch --entryFile identity-provider/main",
+    "start:sp:dev": "nest start --watch --entryFile service-provider/main",
+    "start:idp:prod": "node dist/identity-provider/main",
+    "start:sp:prod": "node dist/service-provider/main",
     "test": "jest",
     "test:unit": "jest --testPathPatterns \"src/.*\\.spec\\.ts$\"",
     "test:e2e": "jest --testPathPatterns \"test/.*\\.e2e-spec\\.ts$\""

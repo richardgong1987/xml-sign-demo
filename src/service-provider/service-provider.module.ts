@@ -1,6 +1,6 @@
 import {DynamicModule, Module} from "@nestjs/common";
 
-import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "../config/saml.config";
+import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "./service-provider.config";
 import {SERVICE_PROVIDER_METADATA, ServiceProviderController,} from "./controllers/service-provider.controller";
 import {fetchIdentityProviderTrust, IDENTITY_PROVIDER_TRUST} from "./services/idp-metadata.client";
 import {NodeSamlGateway} from "./services/node-saml.gateway";

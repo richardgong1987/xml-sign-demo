@@ -1,12 +1,10 @@
 # SAML SSO Demo: how an IdP and an SP cooperate
 
-Two NestJS applications in one process, playing both sides of a SAML 2.0 single
-sign-on so you can watch the handshake happen in a browser.
+Two NestJS applications playing both sides of a SAML 2.0 single sign-on, so you can
+watch the handshake happen in a browser.
 
-| | Command |
-| --- | --- |
-| Run the demo | `npm start` |
-| Run the tests | `npm test` |
+IdP and SP are two **separately deployable applications**, each with its own entry
+point, its own configuration, and its own command line. Start them in two terminals.
 
 ## Requirements
 
@@ -21,21 +19,31 @@ TypeScript throughout, compiled by `nest build`. Ports are resolved with
 
 ```bash
 npm install
-npm start
+
+npm run start:idp     # terminal 1 — Demo OpenAM on :4000
+npm run start:sp      # terminal 2 — JSL-online on :3000
 ```
 
 Then open <http://localhost:3000> and click "Sign in through Demo OpenAM".
 
-Two independent applications start in the same process:
+**Start the IdP first.** The SP imports the signing certificate while its module
+initialises, so starting it alone exits with a clear message rather than coming up
+half-configured:
 
-- **Demo OpenAM (IdP)** — `http://localhost:4000`
-- **JSL-online (SP)** — `http://localhost:3000`
+```
+Cannot read the IdP metadata: http://localhost:4000/idp/metadata is unreachable
+```
 
-Both ports can be overridden:
+Each application takes its own options — neither has a flag for the other's port,
+because neither owns it:
 
 ```bash
-npm start -- --idp-port 4001 --sp-port 3001
+npm run start:idp -- --port 4001 --sp-url http://localhost:3001
+npm run start:sp  -- --port 3001 --idp-url http://localhost:4001
 ```
+
+`--sp-url` is registration data: the IdP will only issue assertions for a service
+provider it has been told about. `--idp-url` is where the SP goes to fetch trust.
 
 ### Endpoints
 
@@ -105,12 +113,13 @@ const moduleRef = await Test.createTestingModule({
 }).compile();
 ```
 
-The end-to-end suite (`test/single-sign-on.e2e-spec.ts`) calls `startSamlDemo()` and
-drives both applications with a cookie-keeping `fetch` acting as a browser, asserting
-each hop. It also covers three rejection paths: man-in-the-middle tampering
-(`Invalid signature`), replaying the same SAMLResponse (`InResponseTo is not valid`),
-and a malformed AuthnRequest. It listens on ports 14000/15000, so it can run while
-`npm start` is up.
+The end-to-end suite (`test/single-sign-on.e2e-spec.ts`) needs both applications at
+once, which production never does, so `test/start-both-applications.ts` puts the pair in
+one process — the only place that orchestration exists. It then drives them with a
+cookie-keeping `fetch` acting as a browser, asserting each hop, and covers three
+rejection paths: man-in-the-middle tampering (`Invalid signature`), replaying the same
+SAMLResponse (`InResponseTo is not valid`), and a malformed AuthnRequest. It listens on
+ports 14000/15000, so it can run while a development server is up.
 
 ## What the two libraries do
 
@@ -136,19 +145,21 @@ cooperate over HTTP alone. Inside each, files are grouped by technical layer.
 
 ```text
 docs/design/saml-sso-http.md  design doc: boundaries, dependency direction, test strategy
-src/main.ts                   CLI entry point; parses ports, prints the banner
-src/bootstrap.ts              creates and starts both Nest applications
-src/config/saml.config.ts     derives every entity ID and URL from the two ports
 
-src/identity-provider/        Demo OpenAM
+src/identity-provider/        Demo OpenAM — deployable on its own
+├── main.ts                   entry point: --port, --sp-url
+├── identity-provider.config.ts   its own configuration, including the SP registry
 ├── models/                   user directory, SP registry, SAMLResponse and metadata factories
-├── services/                 issuing use case, xml-crypto signer, AuthnRequest parser
+├── services/                 issuing use case, xml-crypto signer, AuthnRequest parser,
+│                             signing credential
 ├── controllers/              @Controller with @Render
 ├── presenters/               use-case result -> view model
 ├── views/                    login.ejs, auto-post.ejs
 └── identity-provider.module.ts   binds every port to an implementation
 
-src/service-provider/         JSL-online
+src/service-provider/         JSL-online — deployable on its own
+├── main.ts                   entry point: --port, --idp-url
+├── service-provider.config.ts    its own configuration
 ├── models/                   authenticated-user.ts
 ├── services/                 start/complete SSO use cases, node-saml, sessions, metadata client
 ├── controllers/
@@ -156,15 +167,21 @@ src/service-provider/         JSL-online
 ├── views/                    home.ejs, profile.ejs
 └── service-provider.module.ts
 
-src/shared/                   what both applications share
+src/shared/                   web plumbing neither application should reinvent
 ├── clock.ts                  Clock port + SystemClock
+├── create-web-application.ts NestFactory + views + failure filter
 ├── saml-failure.filter.ts    @Catch() filter: domain failure -> 400 + cause chain in the log
 ├── web-layer.ts              view directories and static assets
+├── x509-certificate.ts       PEM <-> base64 body
 ├── views/                    common layout: _head.ejs, _foot.ejs
 └── public/demo.css
 
-test/                         end-to-end suite
+test/                         end-to-end suite + the only code that starts both at once
 ```
+
+Neither application imports anything from the other — not a config file, not a
+constant. The IdP is told which service providers to trust; the SP is told where to
+fetch trust from. Everything else travels over HTTP.
 
 Which layer a file belongs to is decided by *what makes it change*:
 

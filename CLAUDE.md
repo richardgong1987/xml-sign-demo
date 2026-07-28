@@ -9,14 +9,17 @@ npm install        # install dependencies
 npm test           # everything (54 cases) — the verification loop
 npm run test:unit  # src/**/*.spec.ts only, no HTTP/keys needed
 npm run test:e2e   # test/*.e2e-spec.ts only, boots real apps on :14000/:15000
-npm start          # IdP on :4000 + SP on :3000 (override with -- --idp-port / --sp-port)
+npm run start:idp  # Demo OpenAM on :4000  (-- --port N --sp-url URL)
+npm run start:sp   # JSL-online on :3000   (-- --port N --idp-url URL)
 npm run build      # nest build -> dist/
 npx tsc --noEmit   # typecheck without emitting
 ```
 
 Jest with `ts-jest`; there is no separate lint step. Run one file with `npx jest src/identity-provider/services/authn-request.parser.spec.ts`, one case with `-t "<name>"`.
 
-E2E specs call `startSamlDemo()` from `src/bootstrap.ts` directly, so they exercise the real module wiring, and they use their own ports — `npm start` can stay running while they execute.
+There is no single command that starts both — that is the point of the split. Start the IdP first; the SP imports its certificate during module init and exits with a clear message if the IdP is unreachable.
+
+E2E specs use `test/start-both-applications.ts`, the only code anywhere that puts both in one process. It builds each application exactly as its `main.ts` does, so the specs exercise real wiring, and it uses its own ports — a dev server can stay running while they execute.
 
 `nest-cli.json` copies `**/views/**/*.ejs` and `**/public/**/*` into `dist/`. A new template or asset directory needs an entry there or the built app will 500 on render.
 
@@ -24,36 +27,36 @@ Note: `package-lock.json` is out of sync with `package.json`, so `npm ci` fails.
 
 ## What this repository is
 
-A teaching demo of SAML 2.0 SSO. Two NestJS applications run in one process on separate ports, playing **Demo OpenAM (IdP, :4000)** and **JSL-online (SP, :3000)**, showing how the two sides actually cooperate through the browser.
+A teaching demo of SAML 2.0 SSO. Two independently deployable NestJS applications — **Demo OpenAM (IdP, :4000)** and **JSL-online (SP, :3000)** — showing how the two sides actually cooperate through the browser.
 
 The design doc is `docs/design/saml-sso-http.md` — read it before changing boundaries; it records the dependency direction and the reasoning behind each trade-off.
 
 ## Architecture (src/)
 
-**Two independent applications first, technical layers second.** `src/identity-provider/` and `src/service-provider/` are separate Nest modules that never import each other — they cooperate over HTTP only. That is the primary boundary; preserve it.
+**Two independently deployable applications first, technical layers second.** `src/identity-provider/` and `src/service-provider/` each own an entry point and a config module and import *nothing* from each other — not even a constant. That is the primary boundary; preserve it. If something seems to belong to both, it belongs to `shared/` only if it is generic web plumbing; anything SAML-specific stays duplicated or travels over HTTP.
 
 ```
-src/main.ts                 CLI entry point: parseArgs for ports, prints the banner
-src/bootstrap.ts            creates + starts both Nest applications
-src/config/saml.config.ts   createSamlConfigs(ports) derives every entity ID and URL
-
 src/identity-provider/      Demo OpenAM
+  main.ts                   entry point; --port, --sp-url
+  identity-provider.config.ts   its config + the SP registry it was told to trust
   models/                   user-directory, service-provider-registry,
                             saml-response.factory, idp-metadata.factory
   services/                 issue-saml-response.use-case, xml-crypto-assertion-signer,
-                            authn-request.parser, tampering.simulator
+                            authn-request.parser, signing-credential, tampering.simulator
   controllers/ presenters/ views/
   identity-provider.module.ts
 
 src/service-provider/       JSL-online
+  main.ts                   entry point; --port, --idp-url
+  service-provider.config.ts
   models/                   authenticated-user
   services/                 start/complete-single-sign-on.use-case, node-saml.gateway,
                             session-store, idp-metadata.client
   controllers/ presenters/ views/
   service-provider.module.ts
 
-src/shared/                 clock, saml-failure.filter, web-layer, x509-certificate,
-                            signing-credential, saml-id, views/, public/
+src/shared/                 clock, create-web-application, saml-failure.filter,
+                            web-layer, x509-certificate, saml-id, views/, public/
 ```
 
 Where a file goes is decided by *what makes it change*: business rule → `models/`, workflow or external library → `services/`, wire protocol → `controllers/`, page output → `presenters/` + `views/`, swapping an implementation → the `*.module.ts`.
@@ -66,7 +69,8 @@ Rules that hold across the codebase:
 - No HTML or CSS in TypeScript. Markup lives in each application's `views/*.ejs`; `@Render("template")` names the view and the handler returns the model; a presenter builds that model. Escaping is EJS's `<%= %>` — don't hand-roll it. Every page opens with `include("_head", { title })` and closes with `include("_foot")`.
 - `shared/web-layer.ts` sets each app's views to `[ownViews, sharedViews]` and mirrors that list into `app.locals.views` — Express does not forward its views setting to the template engine, and EJS resolves `include()` from `options.views`. Removing that line silently breaks every `include("_head")`.
 - `ServiceProviderModule` declares the IdP certificate as an **async provider**: the SP app cannot finish initialising before it has fetched `GET /idp/metadata`. That ordering is the trust-establishment order and is the point of the demo; don't replace it with a hardcoded certificate.
-- Ports (the TCP kind) are a parameter, not a constant: every entity ID and URL is derived from them in `createSamlConfigs()`. That is what lets the e2e suite run a second, isolated pair of apps.
+- Each application derives its own entity ID and URLs from its own port, in its own config module. Neither has a flag for the other's port. That is what lets the e2e suite run a second, isolated pair.
+- `nest build` produces two entry points (`dist/identity-provider/main.js`, `dist/service-provider/main.js`). `nest-cli.json` names the IdP as the default `entryFile`; the scripts pass `--entryFile` explicitly.
 
 Two boundaries that carry security meaning, not just structure:
 

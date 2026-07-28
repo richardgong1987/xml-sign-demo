@@ -1,22 +1,25 @@
-import { RunningSamlDemo, startSamlDemo } from "../src/bootstrap";
+import { RunningApplications, startBothApplications } from "./start-both-applications";
 import { Browser, createBrowser, readFormAction, readHiddenFields } from "./browser";
 
 /*
  * Drives the whole SP-initiated SSO flow over real HTTP against both applications.
  *
- * The ports deliberately avoid the 4000/3000 pair used by npm start, so the suite can
- * run while a development server is up.
+ * Production starts each application from its own main.ts; startBothApplications() is
+ * the test-only equivalent that puts the pair in one process.
+ *
+ * The ports deliberately avoid the 4000/3000 pair the two mains default to, so the
+ * suite can run while a development server is up.
  */
 const TEST_PORTS = { identityProviderPort: 14000, serviceProviderPort: 15000 };
 
 const SESSION_COOKIE = "sp_session";
 
-let demo: RunningSamlDemo;
+let demo: RunningApplications;
 let identityProviderBaseUrl: string;
 let serviceProviderBaseUrl: string;
 
 beforeAll(async () => {
-    demo = await startSamlDemo(TEST_PORTS);
+    demo = await startBothApplications(TEST_PORTS);
     identityProviderBaseUrl = `http://localhost:${demo.identityProviderConfig.port}`;
     serviceProviderBaseUrl = `http://localhost:${demo.serviceProviderConfig.port}`;
 }, 30_000);
@@ -27,9 +30,9 @@ afterAll(async () => {
 
 describe("trust establishment", () => {
     it("imports entity ID, SSO URL, and signing certificate from the IdP metadata at startup", () => {
-        expect(demo.identityProvider.entityId).toBe(demo.identityProviderConfig.entityId);
-        expect(demo.identityProvider.singleSignOnUrl).toBe(demo.identityProviderConfig.singleSignOnUrl);
-        expect(demo.identityProvider.signingCertificatePem).toMatch(/^-----BEGIN CERTIFICATE-----/);
+        expect(demo.identityProviderTrust.entityId).toBe(demo.identityProviderConfig.entityId);
+        expect(demo.identityProviderTrust.singleSignOnUrl).toBe(demo.identityProviderConfig.singleSignOnUrl);
+        expect(demo.identityProviderTrust.signingCertificatePem).toMatch(/^-----BEGIN CERTIFICATE-----/);
     });
 
     it("publishes the signing certificate and an HTTP-Redirect SSO endpoint in the IdP metadata", async () => {

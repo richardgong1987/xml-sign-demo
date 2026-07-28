@@ -1,8 +1,8 @@
 import {DynamicModule, Module} from "@nestjs/common";
 
-import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../config/saml.config";
+import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "./identity-provider.config";
 import {Clock, SystemClock} from "../shared/clock";
-import {SIGNING_CREDENTIAL, SigningCredential} from "../shared/signing-credential";
+import {SIGNING_CREDENTIAL, SigningCredential} from "./services/signing-credential";
 import {IDENTITY_PROVIDER_METADATA, IdentityProviderController,} from "./controllers/identity-provider.controller";
 import {createIdentityProviderMetadata} from "./models/idp-metadata.factory";
 import {ServiceProviderRegistry} from "./models/service-provider-registry";

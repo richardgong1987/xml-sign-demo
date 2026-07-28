@@ -1,6 +1,10 @@
 import {Inject, Injectable} from "@nestjs/common";
 
-import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig, RegisteredServiceProvider,} from "../../config/saml.config";
+import {
+    IDENTITY_PROVIDER_CONFIG,
+    IdentityProviderConfig,
+    RegisteredServiceProvider,
+} from "../identity-provider.config";
 
 export class UnregisteredServiceProviderError extends Error {
     constructor(entityId: string) {

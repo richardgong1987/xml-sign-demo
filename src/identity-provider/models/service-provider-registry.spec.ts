@@ -1,9 +1,17 @@
 import {Test} from "@nestjs/testing";
 
-import {createSamlConfigs, DEFAULT_PORTS, IDENTITY_PROVIDER_CONFIG} from "../../config/saml.config";
+import {
+    DEFAULT_IDENTITY_PROVIDER_PORT,
+    DEFAULT_SERVICE_PROVIDER_BASE_URLS,
+    IDENTITY_PROVIDER_CONFIG,
+    createIdentityProviderConfig,
+} from "../identity-provider.config";
 import {ServiceProviderRegistry, UnregisteredServiceProviderError,} from "./service-provider-registry";
 
-const {identityProviderConfig} = createSamlConfigs(DEFAULT_PORTS);
+const identityProviderConfig = createIdentityProviderConfig({
+    port: DEFAULT_IDENTITY_PROVIDER_PORT,
+    serviceProviderBaseUrls: DEFAULT_SERVICE_PROVIDER_BASE_URLS,
+});
 const JSL_ONLINE = identityProviderConfig.registeredServiceProviders[0];
 
 describe("ServiceProviderRegistry", () => {

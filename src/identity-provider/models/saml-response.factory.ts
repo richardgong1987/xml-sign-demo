@@ -1,4 +1,4 @@
-import {RegisteredServiceProvider} from "../../config/saml.config";
+import {RegisteredServiceProvider} from "../identity-provider.config";
 import {createSamlId} from "../../shared/saml-id";
 import {DirectoryUser} from "./user-directory";
 

@@ -1,6 +1,6 @@
 import {Inject, Injectable} from "@nestjs/common";
 
-import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../../config/saml.config";
+import {IDENTITY_PROVIDER_CONFIG, IdentityProviderConfig} from "../identity-provider.config";
 import {Clock} from "../../shared/clock";
 import {createUnsignedSamlResponse} from "../models/saml-response.factory";
 import {ServiceProviderRegistry} from "../models/service-provider-registry";

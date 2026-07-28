@@ -75,18 +75,25 @@ Browser           SP (:3000)                      IdP (:4000)
   |<-- 302 /profile --|                                |
 ```
 
-Establishing trust: at startup the SP fetches `GET /idp/metadata` and reads the IdP's
-entity ID, SSO URL, and signing certificate from it, using the certificate as
-node-saml's `idpCert`. The SP never touches the IdP private key.
+Establishing trust: while its module initialises the SP fetches `GET /idp/metadata` and
+reads the IdP's entity ID, SSO URL, and signing certificate from it, using the
+certificate as node-saml's `idpCert`. The SP never touches the IdP private key.
+
+Because that fetch is an async provider, the SP cannot start before the IdP is
+reachable; doing so exits with `Cannot read the IdP metadata: ... is unreachable`. A
+production SP would retry, or load the metadata from a file deployed alongside it.
 
 ## 7. Architecture Boundary
 
 The first boundary is "two independent applications"; technical layering comes second.
-IdP and SP are separate Nest modules that cooperate over HTTP alone and import nothing
-from each other.
+Each is deployable on its own — its own `main.ts`, its own config module, its own
+command line — and neither imports anything from the other. They cooperate over HTTP
+alone.
 
 ```text
 src/identity-provider/          src/service-provider/
+├── main.ts (--port, --sp-url)  ├── main.ts (--port, --idp-url)
+├── *.config.ts                 ├── *.config.ts
 ├── models/                     ├── models/
 │   user-directory              │   authenticated-user
 │   service-provider-registry   │
@@ -96,18 +103,23 @@ src/identity-provider/          src/service-provider/
 │   issue-saml-response (UC)    │   start-single-sign-on (UC)
 │   xml-crypto-assertion-signer │   complete-single-sign-on (UC)
 │   authn-request.parser        │   node-saml.gateway
-│   tampering.simulator         │   in-memory-session-store
-│                               │   idp-metadata.client
+│   signing-credential          │   in-memory-session-store
+│   tampering.simulator         │   idp-metadata.client
 ├── controllers/                ├── controllers/
 ├── presenters/                 ├── presenters/
 ├── views/                      ├── views/
 └── *.module.ts (bindings)      └── *.module.ts (bindings)
 
-src/shared/     Clock port, exception filter, view layer, X.509, signing credential
-src/config/     saml.config.ts
-src/bootstrap.ts  creates both Nest applications
-src/main.ts       CLI entry point
+src/shared/     Clock port, exception filter, view layer, X.509, createWebApplication
 ```
+
+Configuration is split along the same seam. The IdP is told which service providers it
+may issue assertions for (`--sp-url`, registration data an administrator would supply);
+the SP is told where to fetch trust (`--idp-url`). Neither has a flag for the other's
+port, because neither owns it.
+
+Nothing in `src/` starts both applications. The end-to-end suite needs them together,
+so that orchestration lives in `test/start-both-applications.ts` and nowhere else.
 
 Ports are abstract classes (`Clock`, `AssertionSigner`, `SamlGateway`, `SessionStore`).
 They survive compilation, so they double as injection tokens, and a use case can depend
@@ -215,6 +227,9 @@ preserved `cause` check its shape rather than its constructor.
 - SAML IDs are generated with `randomUUID()` inside the model layer. Time is injected
   through the `Clock` port for testability, but random IDs affect no assertion, so no
   additional port was introduced for them.
+- The SP has a hard startup dependency on the IdP being reachable. That makes the trust
+  import visible, which is the teaching goal, but it is not how a production SP should
+  behave: it should retry, cache, or read metadata from disk.
 - NestJS adds a build step and a sizeable dependency tree to what was a
   dependency-light demo. The trade is that the DI container now enforces the wiring
   rules the architecture describes — a use case cannot reach an implementation it was

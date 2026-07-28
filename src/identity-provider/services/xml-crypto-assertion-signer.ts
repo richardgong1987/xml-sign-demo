@@ -1,7 +1,7 @@
 import {Inject, Injectable} from "@nestjs/common";
 import {SignedXml} from "xml-crypto";
 
-import {SIGNING_CREDENTIAL, SigningCredential} from "../../shared/signing-credential";
+import {SIGNING_CREDENTIAL, SigningCredential} from "./signing-credential";
 import {AssertionSigner} from "./assertion-signer";
 
 const ASSERTION_XPATH = "//*[local-name(.)='Assertion']";

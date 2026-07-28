@@ -1,7 +1,7 @@
 import {Inject, Injectable} from "@nestjs/common";
 import {SAML} from "@node-saml/node-saml";
 
-import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "../../config/saml.config";
+import {SERVICE_PROVIDER_CONFIG, ServiceProviderConfig} from "../service-provider.config";
 import {AuthenticatedUser, createAuthenticatedUser} from "../models/authenticated-user";
 import {IDENTITY_PROVIDER_TRUST, IdentityProviderTrust} from "./idp-metadata.client";
 import {SamlGateway} from "./saml-gateway";
