@@ -81,9 +81,9 @@ node-saml's `idpCert`. The SP never touches the IdP private key.
 
 ## 7. Architecture Boundary
 
-The first boundary is "two independent projects"; technical layering comes second.
-IdP and SP each own a directory, cooperate over HTTP alone, and import nothing from
-each other.
+The first boundary is "two independent applications"; technical layering comes second.
+IdP and SP are separate Nest modules that cooperate over HTTP alone and import nothing
+from each other.
 
 ```text
 src/identity-provider/          src/service-provider/
@@ -101,42 +101,42 @@ src/identity-provider/          src/service-provider/
 ├── controllers/                ├── controllers/
 ├── presenters/                 ├── presenters/
 ├── views/                      ├── views/
-└── app.js (wiring point)       └── app.js (wiring point)
+└── *.module.ts (bindings)      └── *.module.ts (bindings)
 
-src/shared/utils/   clock, SAML ID, X.509, template engine, error handling
-src/shared/views/   common layout
-src/bootstrap.js    starts both projects and performs the trust import
+src/shared/     Clock port, exception filter, view layer, X.509, signing credential
+src/config/     saml.config.ts
+src/bootstrap.ts  creates both Nest applications
+src/main.ts       CLI entry point
 ```
 
-Within a project, which layer a file belongs to depends on what makes it change:
+Ports are abstract classes (`Clock`, `AssertionSigner`, `SamlGateway`, `SessionStore`).
+They survive compilation, so they double as injection tokens, and a use case can depend
+on the abstraction while only the module names an implementation. Values that have no
+class to hang off — configuration objects, the metadata string — use symbol tokens,
+because a TypeScript interface does not exist at runtime.
+
+Within an application, which layer a file belongs to depends on what makes it change:
 a business rule goes to `models/`, a workflow or an external library to `services/`,
 the wire protocol to `controllers/`, page output to `presenters/` and `views/`, and
-swapping an implementation to `app.js`.
+swapping an implementation to the module.
 
 ### Views
 
-No HTML lives in JavaScript. The responsibility splits three ways:
+No HTML lives in TypeScript. The responsibility splits three ways:
 
 ```text
-<project>/presenters/   picks the template and prepares its data, returns { view, model }
-<project>/views/        that project's page templates; EJS's <%= %> does the escaping
-shared/views/           common layout: _head.ejs and _foot.ejs
-shared/public/          stylesheet, mounted at the root of both projects
+<app>/presenters/   turns a use-case result into exactly the data one template needs
+<app>/views/        that application's page templates; EJS's <%= %> does the escaping
+shared/views/       common layout: _head.ejs and _foot.ejs
+shared/public/      stylesheet, mounted at the root of both applications
 ```
 
-Controllers call the template engine through `shared/utils/render-view.js`, so neither
-controllers nor presenters know EJS exists. Swapping template engines touches only
-`render-view.js`, `view-engine.js`, and the templates themselves.
-
-`shared/utils/view-engine.js` sets each app's view directories to
-`[the project's own views, shared/views]`: pages resolve inside the project, and
-`include("_head")` falls back to the common layout. Note that Express never forwards
-its views setting to the template engine, so the same list must also be written to
-`app.locals.views` for EJS to see it when resolving includes.
-
-Ports are declared as JSDoc `@typedef` at the top of the use case that needs them.
-JavaScript has no interface keyword, and giving a one- or two-method port its own file
-would only add navigation cost.
+A controller names its template with `@Render("login")` and returns the model, so no
+controller ever touches the view engine. `shared/web-layer.ts` sets each application's
+view directories to `[the application's own views, shared/views]`: pages resolve inside
+the application, and `include("_head")` falls back to the common layout. Note that
+Express never forwards its views setting to the template engine, so the same list must
+also be written to `app.locals.views` for EJS to see it when resolving includes.
 
 ## 8. Dependencies
 
@@ -149,11 +149,11 @@ adapter    -> port implementation
 
 Files under `models/` and the use cases under `services/` import no `express`, no
 `xml-crypto`, and no `@node-saml/node-saml`. Those libraries appear only in the
-adapter files under `services/`, in `controllers/`, and in `app.js`.
+adapter files under `services/`, in `controllers/`, and in the module files.
 
 ## 9. External Details
 
-- `express` / `cookie-parser`: HTTP transport.
+- `@nestjs/core` / `@nestjs/platform-express` / `cookie-parser`: HTTP transport and DI.
 - `ejs`: page templates.
 - `xml-crypto`: XML canonicalization, digests, RSA signing and verification.
 - `@node-saml/node-saml`: AuthnRequest generation, SAMLResponse validation, SP metadata.
@@ -164,32 +164,40 @@ adapter files under `services/`, in `controllers/`, and in `app.js`.
 
 ## 10. Test Strategy
 
-`npm test` runs both layers in one go: 38 cases.
+`npm test` runs both layers in one go: 54 cases on Jest with `ts-jest`.
 
-`tests/identity-provider/` and `tests/service-provider/` (27 cases) need no HTTP, keys,
-or database:
+Unit specs sit next to the code they cover (`src/**/*.spec.ts`) and need no HTTP, keys,
+or database. Those covering a Nest provider build their subject with
+`Test.createTestingModule`, binding fakes to the very same ports the production module
+binds real implementations to:
 
 - `saml-response.factory`: validity window under a fixed `issuedAt`, Audience,
   Destination, `InResponseTo` echoing, attribute mapping.
 - `user-directory` / `service-provider-registry`: unknown entries raise domain errors,
-  and the `Object.hasOwn` guard keeps prototype members out.
+  and the `Map` behind the directory keeps prototype members out.
+- `authn-request.parser`: namespace-prefix independence, whitespace around a
+  pretty-printed Issuer, and every rejection path (missing parameter, non-deflate
+  payload with the zlib failure kept as `cause`, non-XML payload, missing ID or Issuer,
+  a well-formed message that is not an AuthnRequest).
 - `authenticated-user`: refuses creation without a NameID, immutable afterwards.
-- `IssueSamlResponseUseCase`: with a fake `AssertionSignerPort` and a fixed `ClockPort`,
+- `IssueSamlResponseUseCase`: with a fake `AssertionSigner` and a fixed `Clock`,
   asserts the delivery address comes from the registry, the time comes from the
   injected clock, and invalid input never reaches the signing step.
-- `CompleteSingleSignOnUseCase`: with a fake `SamlGatewayPort` and `SessionStorePort`,
-  asserts the RelayState off-site fallback and that a failed validation opens no session.
+- `CompleteSingleSignOnUseCase`: with a fake `SamlGateway` and `SessionStore`, asserts
+  the RelayState off-site fallback and that a failed validation opens no session.
 
-End to end (`tests/e2e/`, 11 cases) reuses `src/bootstrap.js` to start both services for
-real and drives them with a cookie-keeping `fetch` acting as a browser, asserting each
-hop: metadata exchange, AuthnRequest generation and parsing, issuing and delivery,
-session creation, RelayState redirect, sign-out, plus two rejection paths
-(man-in-the-middle tampering -> `Invalid signature`; replay -> `InResponseTo is not valid`).
+End to end (`test/single-sign-on.e2e-spec.ts`) calls `startSamlDemo()` to boot both Nest
+applications for real and drives them with a cookie-keeping `fetch` acting as a browser,
+asserting each hop: metadata exchange, AuthnRequest generation and parsing, issuing and
+delivery, session creation, RelayState redirect, sign-out, plus three rejection paths
+(man-in-the-middle tampering -> `Invalid signature`; replay -> `InResponseTo is not
+valid`; malformed AuthnRequest -> 400).
 
 The end-to-end suite listens on ports 14000/15000, so it can run while `npm start` is up.
 
-`identity-provider/services/authn-request.parser` is currently covered only indirectly
-by the end-to-end flow; unit tests for malformed SAMLRequests are not yet written.
+One Jest caveat worth knowing: its `node` environment isolates realms, so an error
+raised inside a Node core module is not `instanceof Error` in a spec. Assertions about a
+preserved `cause` check its shape rather than its constructor.
 
 ## 11. Risks and Trade-offs
 
@@ -199,8 +207,16 @@ by the end-to-end flow; unit tests for malformed SAMLRequests are not yet writte
 - The IdP private key and certificate are regenerated on every start, so assertions
   issued before a restart stop verifying. Production uses PKI-issued, long-lived material.
 - Sessions live in memory: lost on restart, and not deployable across instances.
-- `tampering.simulator.js` is an attack simulation standing in for a browser or network
+- `tampering.simulator.ts` is an attack simulation standing in for a browser or network
   man-in-the-middle. It is not IdP business logic and has no place in production code.
-- SAML IDs are generated with `crypto.randomUUID()` inside the model layer. Time is
-  injected through `ClockPort` for testability, but random IDs affect no assertion, so
-  no additional port was introduced for them.
+- `SamlFailureFilter` turns every non-HttpException into a 400 carrying the rejection
+  reason. That is deliberate for a demo meant to be read; a production SP would answer
+  with a generic page and keep the detail in the log.
+- SAML IDs are generated with `randomUUID()` inside the model layer. Time is injected
+  through the `Clock` port for testability, but random IDs affect no assertion, so no
+  additional port was introduced for them.
+- NestJS adds a build step and a sizeable dependency tree to what was a
+  dependency-light demo. The trade is that the DI container now enforces the wiring
+  rules the architecture describes — a use case cannot reach an implementation it was
+  not given — and the trust import became an async provider rather than hand-ordered
+  startup code.

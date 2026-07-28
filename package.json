@@ -1,26 +1,45 @@
 {
-  "name": "node-saml-xml-crypto-direct-call-demo",
+  "name": "saml-sso-nestjs-demo",
   "version": "1.0.0",
   "private": true,
-  "description": "A direct method-call demo showing how @node-saml/node-saml uses xml-crypto.",
-  "type": "module",
+  "description": "A NestJS demo of SAML 2.0 SSO, showing how an IdP and an SP cooperate and how @node-saml/node-saml uses xml-crypto.",
   "scripts": {
-    "start": "node src/server.js",
-    "test": "node --test \"tests/**/*.test.js\"",
-    "test:unit": "node --test \"tests/identity-provider/**/*.test.js\" \"tests/service-provider/**/*.test.js\"",
-    "test:e2e": "node --test \"tests/e2e/*.test.js\""
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main",
+    "test": "jest",
+    "test:unit": "jest --testPathPatterns \"src/.*\\.spec\\.ts$\"",
+    "test:e2e": "jest --testPathPatterns \"test/.*\\.e2e-spec\\.ts$\""
   },
   "dependencies": {
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
     "@node-saml/node-saml": "5.1.0",
     "@xmldom/xmldom": "0.9.10",
     "cookie-parser": "^1.4.7",
     "ejs": "^6.0.1",
     "express": "^5.2.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
     "selfsigned": "^5.5.0",
     "xml-crypto": "6.1.2",
     "xpath": "0.0.34"
   },
   "engines": {
     "node": ">=24"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.1.28",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/ejs": "^3.1.5",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.1.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.9.3"
   }
 }

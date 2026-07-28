@@ -1,7 +1,7 @@
 # SAML SSO Demo: how an IdP and an SP cooperate
 
-Two Express services in one process, playing both sides of a SAML 2.0 single sign-on
-so you can watch the handshake happen in a browser.
+Two NestJS applications in one process, playing both sides of a SAML 2.0 single
+sign-on so you can watch the handshake happen in a browser.
 
 | | Command |
 | --- | --- |
@@ -13,10 +13,9 @@ so you can watch the handshake happen in a browser.
 - Node.js 24 or newer
 - npm
 
-The code is written as ES Modules (`"type": "module"` in `package.json`, so every
-`.js` file is an ES module). It uses `import.meta.dirname`, `node:util`'s `styleText`
-and `parseArgs`, `AbortSignal.timeout()`, and `RegExp.escape()` — hence the Node 24
-floor.
+TypeScript throughout, compiled by `nest build`. Ports are resolved with
+`import.meta`-free CommonJS output, and the code uses `node:util`'s `styleText` and
+`parseArgs`, `AbortSignal.timeout()`, and `RegExp.escape()` — hence the Node 24 floor.
 
 ## Running it
 
@@ -27,7 +26,7 @@ npm start
 
 Then open <http://localhost:5000> and click "Sign in through Demo OpenAM".
 
-Two independent services start in the same process:
+Two independent applications start in the same process:
 
 - **Demo OpenAM (IdP)** — `http://localhost:4000`
 - **JSL-online (SP)** — `http://localhost:5000`
@@ -69,9 +68,11 @@ Browser           SP (:5000)                      IdP (:4000)
   |<-- 302 /profile --| Set-Cookie                     |
 ```
 
-How trust is established: at startup the SP fetches `GET /idp/metadata` and imports the
-IdP's signing certificate as node-saml's `idpCert`. **The SP never touches the IdP
-private key.**
+How trust is established: `ServiceProviderModule` declares the IdP's certificate as an
+**async provider**, so the SP application does not finish initialising until it has
+fetched `GET /idp/metadata` and read the signing certificate out of it. That ordering
+is enforced by the DI container rather than by hand-written startup code. **The SP
+never touches the IdP private key.**
 
 ### Tampering
 
@@ -82,18 +83,34 @@ browser to POST. The SP's ACS answers `Invalid signature` and opens no session.
 ## Tests
 
 ```bash
-npm test           # all 38 cases
-npm run test:unit  # models and services, 27 cases, no HTTP or keys needed
-npm run test:e2e   # end to end, 11 cases, boots both services for real
+npm test           # all 54 cases
+npm run test:unit  # models and services only, no HTTP or keys needed
+npm run test:e2e   # end to end, boots both applications for real
 ```
 
-Everything runs on Node's built-in `node:test` — no test framework dependency.
+Jest with `ts-jest`. Unit specs sit next to the code they cover (`*.spec.ts`) and build
+their subject with `Test.createTestingModule`, binding fake implementations to the same
+ports the production module binds real ones to:
 
-The end-to-end suite reuses `src/bootstrap.js` to start the services and drives them
-with a cookie-keeping `fetch` acting as a browser, asserting each hop. It also covers
-two rejection paths: man-in-the-middle tampering (`Invalid signature`) and replaying
-the same SAMLResponse (`InResponseTo is not valid`). It listens on ports 14000/15000,
-so it can run while `npm start` is up.
+```ts
+const moduleRef = await Test.createTestingModule({
+    providers: [
+        IssueSamlResponseUseCase,
+        UserDirectory,
+        ServiceProviderRegistry,
+        { provide: IDENTITY_PROVIDER_CONFIG, useValue: IDENTITY_PROVIDER },
+        { provide: AssertionSigner, useValue: recordingSigner },
+        { provide: Clock, useClass: FixedClock },
+    ],
+}).compile();
+```
+
+The end-to-end suite (`test/single-sign-on.e2e-spec.ts`) calls `startSamlDemo()` and
+drives both applications with a cookie-keeping `fetch` acting as a browser, asserting
+each hop. It also covers three rejection paths: man-in-the-middle tampering
+(`Invalid signature`), replaying the same SAMLResponse (`InResponseTo is not valid`),
+and a malformed AuthnRequest. It listens on ports 14000/15000, so it can run while
+`npm start` is up.
 
 ## What the two libraries do
 
@@ -114,42 +131,42 @@ this login result is meant for us, is valid right now, and came from the IdP we 
 
 ## Layout
 
-IdP and SP are two independent projects that never import each other — they cooperate
-over HTTP alone. Inside each, files are grouped by technical layer.
+IdP and SP are two independent Nest modules that never import each other — they
+cooperate over HTTP alone. Inside each, files are grouped by technical layer.
 
 ```text
 docs/design/saml-sso-http.md  design doc: boundaries, dependency direction, test strategy
-src/config.js                 derives every entity ID and URL from the two ports
-src/bootstrap.js              composition root: start the IdP, then let the SP import its metadata
-src/server.js                 CLI entry point; prints the banner
+src/main.ts                   CLI entry point; parses ports, prints the banner
+src/bootstrap.ts              creates and starts both Nest applications
+src/config/saml.config.ts     derives every entity ID and URL from the two ports
 
 src/identity-provider/        Demo OpenAM
 ├── models/                   user directory, SP registry, SAMLResponse and metadata factories
 ├── services/                 issuing use case, xml-crypto signer, AuthnRequest parser
-├── controllers/              idp.controller.js
-├── presenters/               idp.presenter.js
+├── controllers/              @Controller with @Render
+├── presenters/               use-case result -> view model
 ├── views/                    login.ejs, auto-post.ejs
-└── app.js                    this project's wiring point
+└── identity-provider.module.ts   binds every port to an implementation
 
 src/service-provider/         JSL-online
-├── models/                   authenticated-user.js
+├── models/                   authenticated-user.ts
 ├── services/                 start/complete SSO use cases, node-saml, sessions, metadata client
-├── controllers/              sp.controller.js
-├── presenters/               sp.presenter.js
+├── controllers/
+├── presenters/
 ├── views/                    home.ejs, profile.ejs
-└── app.js                    this project's wiring point
+└── service-provider.module.ts
 
-src/shared/                   what both projects share
-├── utils/                    clock, SAML ID, X.509, template engine, error handling
+src/shared/                   what both applications share
+├── clock.ts                  Clock port + SystemClock
+├── saml-failure.filter.ts    @Catch() filter: domain failure -> 400 + cause chain in the log
+├── web-layer.ts              view directories and static assets
 ├── views/                    common layout: _head.ejs, _foot.ejs
-└── public/demo.css           stylesheet
+└── public/demo.css
 
-tests/identity-provider/      mirrors src
-tests/service-provider/
-tests/e2e/                    end-to-end suite
+test/                         end-to-end suite
 ```
 
-Inside a project, which layer a file belongs to is decided by *what makes it change*:
+Which layer a file belongs to is decided by *what makes it change*:
 
 | Directory | Reason to change |
 | --- | --- |
@@ -157,11 +174,22 @@ Inside a project, which layer a file belongs to is decided by *what makes it cha
 | `services/` | a workflow changed, or an external library or store was swapped |
 | `controllers/` | the wire protocol changed |
 | `presenters/`, `views/` | the page output changed |
-| `app.js` | an implementation was swapped (in-memory sessions for Redis, say) |
+| `*.module.ts` | an implementation was swapped (in-memory sessions for Redis, say) |
 
-No HTML or CSS lives in JavaScript. Markup sits in each project's `views/*.ejs`, a
-presenter only picks a template and prepares its data (`{ view, model }`), and the
-controller renders through `shared/utils/render-view.js`. Every page opens with
+Ports are abstract classes, so they survive compilation and double as injection tokens:
+
+```ts
+export abstract class AssertionSigner {
+    abstract signAssertion(samlResponseXml: string): string;
+}
+
+// in the module — the only place an implementation is named
+{ provide: AssertionSigner, useClass: XmlCryptoAssertionSigner }
+```
+
+No HTML or CSS lives in TypeScript. Markup sits in each application's `views/*.ejs`,
+`@Render("login")` names the template, and a presenter turns the use-case result into
+exactly the data that template needs. Every page opens with
 `include("_head", { title })` and closes with `include("_foot")`.
 
 ## How production differs
@@ -171,5 +199,7 @@ controller renders through `shared/utils/render-view.js`. Every page opens with
 - The AuthnRequest context belongs in the IdP's own session; this demo passes it in
   hidden form fields.
 - Sessions belong in Redis or a database; this demo keeps them in an in-process Map.
-- `tampering.simulator.js` is an attack simulation for teaching purposes and has no
+- `SamlFailureFilter` returns the rejection reason to the browser so the demo is
+  readable. A production SP would show a generic page and keep the detail in the log.
+- `tampering.simulator.ts` is an attack simulation for teaching purposes and has no
   place in production code.
