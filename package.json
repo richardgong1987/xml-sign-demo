@@ -1,18 +1,19 @@
 {
-  "name": "xml-sign-demo",
+  "name": "node-saml-xml-crypto-direct-call-demo",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "private": true,
+  "description": "A direct method-call demo showing how @node-saml/node-saml uses xml-crypto.",
   "type": "commonjs",
+  "scripts": {
+    "demo": "node demo.js"
+  },
   "dependencies": {
-    "@xmldom/xmldom": "^0.9.10",
-    "xml-crypto": "^6.1.2",
-    "xpath": "^0.0.34"
+    "@node-saml/node-saml": "5.1.0",
+    "@xmldom/xmldom": "0.9.10",
+    "xml-crypto": "6.1.2",
+    "xpath": "0.0.34"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
