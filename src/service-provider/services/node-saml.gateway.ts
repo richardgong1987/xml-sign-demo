@@ -53,8 +53,9 @@ export class NodeSamlGateway extends SamlGateway {
         });
     }
 
-    createLoginRedirectUrl(relayState: string): Promise<string> {
-        return this.saml.getAuthorizeUrlAsync(relayState, undefined, {});
+    async createLoginRedirectUrl(relayState: string) {
+        const url = await this.saml.getAuthorizeUrlAsync(relayState, undefined, {});
+        return url;
     }
 
     async validateSamlResponse(samlResponseBase64: string): Promise<AuthenticatedUser> {

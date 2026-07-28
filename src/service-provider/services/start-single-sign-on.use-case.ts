@@ -19,6 +19,7 @@ export class StartSingleSignOnUseCase {
 
     /** @returns the IdP sign-in URL */
     async execute(command: StartSingleSignOnCommand): Promise<string> {
-        return this.samlGateway.createLoginRedirectUrl(command.returnTo);
+        const url = await this.samlGateway.createLoginRedirectUrl(command.returnTo);
+        return url;
     }
 }
