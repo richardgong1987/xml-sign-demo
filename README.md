@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | HTTP 版 | `npm start` | 两个 Express 服务，浏览器里走完整 SSO 流程 |
 | 离线版 | `npm run demo` | 单进程直接方法调用，只看签名与验签 |
+| 测试 | `npm test` | 单元测试 + 端到端测试 |
 
 ## 运行环境
 
@@ -66,7 +67,20 @@ IdP 登录页上有一个「模拟中间人」勾选框。勾上之后，IdP 会
 `role` 改成 `administrator`，再交给浏览器 POST 给 SP。SP 的 ACS 会返回
 `Invalid signature`，会话不会建立。
 
-`npm run e2e` 会在服务已启动的前提下，自动跑一遍正常登录与篡改两条路径。
+## 测试
+
+```bash
+npm test           # 全部 38 个用例
+npm run test:unit  # domain 与 use case，27 个，不需要 HTTP 和密钥
+npm run test:e2e   # 端到端，11 个，真实启动两个服务
+```
+
+用 Node 内置的 `node:test`，没有额外依赖。
+
+端到端测试复用 `src/bootstrap.js` 启动服务，用带 Cookie 的 `fetch` 扮演浏览器，
+逐跳断言整条链路，并覆盖两条拒绝路径：中间人篡改（`Invalid signature`）和
+重放同一份 SAMLResponse（`InResponseTo is not valid`）。它跑在 14000/15000 端口，
+所以开着 `npm start` 也能执行。
 
 ## 离线版
 
@@ -97,15 +111,17 @@ NotOnOrAfter，最后返回用户 Profile。
 
 ```text
 docs/design/saml-sso-http.md    设计文档：边界、依赖方向、测试策略
-src/config.js                   两端的 Entity ID、地址、有效期
-src/server.js                   组装根：先起 IdP，再让 SP 导入 metadata
+src/config.js                   由端口推导出两端的 Entity ID、地址、有效期
+src/bootstrap.js                组装根：先起 IdP，再让 SP 导入 metadata
+src/server.js                   命令行入口，打印启动信息
 src/features/identity-provider/ IdP：用户目录、SP 注册表、Assertion 签名
               └── views/        EJS 模板：登录页、自动提交表单
 src/features/service-provider/  SP：SSO 发起、SAMLResponse 校验、会话
               └── views/        EJS 模板：首页、已登录页
 src/shared/views/               公共 layout：_head.ejs、_foot.ejs
 src/shared/public/demo.css      两个服务共用的样式表
-scripts/e2e.js                  端到端测试
+tests/features/                 domain 与 use case 单元测试
+tests/e2e/                      端到端测试
 demo.js                         离线版
 ```
 

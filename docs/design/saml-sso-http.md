@@ -130,15 +130,29 @@ domain 与 application 层不 import `express`、`xml-crypto`、`@node-saml/node
 
 ## 10. Test Strategy
 
-- domain：`saml-response.factory` 给定固定时间应产出预期的时间窗与 Audience；
-  用户目录和 SP 注册表对未知条目抛出领域错误。
-- use case：用假 `AssertionSignerPort` / `ClockPort` / `SamlGatewayPort` 验证流程，
-  不需要 HTTP 与密钥。
-- adapter：`authn-request.parser` 对合法与损坏的 SAMLRequest 的行为。
-- 集成：`npm run e2e` 用 `fetch` 走完整流程（含篡改场景），断言正常登录成功、
-  篡改后被拒绝。
+`npm test` 一次跑完下面两层，共 38 个用例。
 
-本仓库当前只落地了集成测试（`scripts/e2e.js`），domain 与 use case 的单元测试尚未编写。
+domain 与 use case（`tests/features/`，27 个）不需要 HTTP、密钥或数据库：
+
+- `saml-response.factory`：固定 `issuedAt` 下的时间窗、Audience、Destination、
+  `InResponseTo` 回填、属性映射。
+- `user-directory` / `service-provider-registry`：未知条目抛领域错误；
+  `Object.hasOwn` 守卫挡住原型上的属性。
+- `authenticated-user`：缺少 NameID 时拒绝创建，创建后不可修改。
+- `IssueSamlResponseUseCase`：用假 `AssertionSignerPort` 与固定 `ClockPort`，
+  断言投递地址取自注册表、时间来自注入的时钟、非法输入不会走到签名步骤。
+- `CompleteSingleSignOnUseCase`：用假 `SamlGatewayPort` 与假 `SessionStorePort`，
+  断言 RelayState 的站外回落规则，以及校验失败时不建立会话。
+
+端到端（`tests/e2e/`，11 个）复用 `src/bootstrap.js` 真实启动两个服务，
+用带 Cookie 的 `fetch` 扮演浏览器，逐跳断言：metadata 交换、AuthnRequest 生成与解析、
+签发与投递、会话建立、RelayState 跳转、退出登录，以及两条拒绝路径
+（中间人篡改 → `Invalid signature`；重放 → `InResponseTo is not valid`）。
+
+端到端测试跑在 14000/15000 端口，因此开着 `npm start` 也能执行。
+
+adapter 层的 `authn-request.parser` 目前只被端到端流程间接覆盖，
+针对损坏 SAMLRequest 的单元测试尚未编写。
 
 ## 11. Risks and Trade-offs
 

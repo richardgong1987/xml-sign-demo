@@ -5,13 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm install     # install dependencies
-npm start       # HTTP demo: IdP on :4000 + SP on :5000 (src/server.js)
-npm run e2e     # end-to-end test — requires `npm start` already running
-npm run demo    # offline demo: single process, direct method calls (demo.js)
+npm install        # install dependencies
+npm test           # everything (38 cases) — the verification loop
+npm run test:unit  # domain + use case only (27), no HTTP/keys needed
+npm run test:e2e   # end-to-end only (11), boots real servers on :14000/:15000
+npm start          # HTTP demo: IdP on :4000 + SP on :5000
+npm run demo       # offline demo: single process, direct method calls (demo.js)
 ```
 
-There is no linter or build step. `npm run e2e` is the verification loop: it drives the full SP-initiated SSO flow with `fetch` and asserts both the happy path and the tampered-assertion rejection. Both entry points set `process.exitCode = 1` on failure.
+Tests use Node's built-in `node:test` — no test framework dependency. Run a single file with `node --test tests/features/identity-provider/saml-response.factory.test.js`, or a single case with `--test-name-pattern`. There is no linter or build step.
+
+E2E tests call `startSamlDemo()` from `src/bootstrap.js` directly, so they exercise real wiring, and they use their own ports — `npm start` can stay running while they execute.
 
 Note: `package-lock.json` is out of sync with `package.json`, so `npm ci` fails. Use `npm install`.
 
@@ -29,8 +33,9 @@ The design doc is `docs/design/saml-sso-http.md` — read it before changing bou
 Feature-first, dependencies pointing inward. Both features are flat folders — the layer is in the filename suffix, not in nested directories.
 
 ```
-src/config.js      entity IDs, URLs, lifetimes — the only place ports/hosts appear
-src/server.js      composition root
+src/config.js      createSamlConfigs(ports) derives every entity ID and URL from ports
+src/bootstrap.js   composition root — startSamlDemo(ports), reused by server and e2e
+src/server.js      CLI entry point; prints the banner
 src/shared/        clock, SAML id, X.509 PEM helpers, demo credential, render-view, view-engine
 src/shared/views/  _head.ejs / _foot.ejs — layout shared by both features
 src/shared/public/ demo.css — served statically by both apps
@@ -44,7 +49,8 @@ Rules that hold across the codebase:
 - `shared/view-engine.js` sets each app's views to `[featureViews, sharedViews]`. It also mirrors that list into `app.locals.views` — Express does not forward its views setting to the template engine, and EJS resolves `include()` from `options.views`. Removing that line silently breaks every `include("_head")`.
 - `domain` and `use-case` files import no `express`, no `xml-crypto`, no `@node-saml/node-saml`. Ports are declared as JSDoc `@typedef` at the top of the use case that needs them; implementations live in `*.gateway.js`, `*-signer.js`, `*-store.js`, `*.client.js`.
 - Each feature's `index.js` is its local wiring point — the only file that swaps a port for a concrete implementation.
-- `src/server.js` starts the IdP first, then the SP fetches `GET /idp/metadata` to import the IdP's signing certificate. That order is the trust-establishment order and is the point of the demo; don't collapse it into a shared module.
+- `startSamlDemo()` starts the IdP first, then the SP fetches `GET /idp/metadata` to import the IdP's signing certificate. That order is the trust-establishment order and is the point of the demo; don't collapse it into a shared module.
+- Ports are a parameter, not a constant: every entity ID and URL is derived from them in `createSamlConfigs()`. That is what lets the e2e suite run a second, isolated pair of servers.
 
 Two boundaries that carry security meaning, not just structure:
 

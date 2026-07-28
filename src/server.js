@@ -1,45 +1,15 @@
 "use strict";
 
-const { identityProviderConfig, serviceProviderConfig } = require("./config");
-const { createDemoSigningCredential } = require("./shared/demo-signing-credential");
-const { createIdentityProviderApp } = require("./features/identity-provider");
-const { createServiceProviderApp } = require("./features/service-provider");
-const { fetchIdentityProviderMetadata } = require("./features/service-provider/idp-metadata.client");
+const { DEFAULT_PORTS } = require("./config");
+const { startSamlDemo } = require("./bootstrap");
 
-/**
- * 组装根。
- *
- * 顺序本身就是 SAML 的信任建立顺序：
- *   IdP 先持有私钥并公布 metadata，SP 才能从 metadata 里导入证书。
- */
 async function main() {
-    const signingCredential = await createDemoSigningCredential("Demo OpenAM Signing");
+    const demo = await startSamlDemo(DEFAULT_PORTS);
 
-    await startHttpServer({
-        app: createIdentityProviderApp({ config: identityProviderConfig, signingCredential }),
-        port: identityProviderConfig.port,
-    });
-
-    const identityProvider = await fetchIdentityProviderMetadata(
-        serviceProviderConfig.identityProviderMetadataUrl,
-    );
-
-    await startHttpServer({
-        app: createServiceProviderApp({ config: serviceProviderConfig, identityProvider }),
-        port: serviceProviderConfig.port,
-    });
-
-    printStartupBanner(identityProvider);
+    printStartupBanner(demo);
 }
 
-function startHttpServer({ app, port }) {
-    return new Promise((resolve, reject) => {
-        const server = app.listen(port, () => resolve(server));
-        server.on("error", reject);
-    });
-}
-
-function printStartupBanner(identityProvider) {
+function printStartupBanner({ identityProviderConfig, serviceProviderConfig, identityProvider }) {
     console.log(`
 IdP（Demo OpenAM）  http://localhost:${identityProviderConfig.port}
   GET  /idp/metadata          IdP metadata（含签名证书）
