@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install        # install dependencies
-npm test           # everything (54 cases) — the verification loop
+npm test           # everything (64 cases) — the verification loop
 npm run test:unit  # src/**/*.spec.ts only, no HTTP/keys needed
 npm run test:e2e   # test/*.e2e-spec.ts only, boots real apps on :14000/:15000
 npm run start:idp  # Demo OpenAM on :4000  (-- --port N --sp-url URL)
@@ -51,7 +51,7 @@ src/service-provider/       JSL-online
   service-provider.config.ts
   models/                   authenticated-user
   services/                 start/complete-single-sign-on.use-case, node-saml.gateway,
-                            session-store, idp-metadata.client
+                            access-token (port) + jwt-access-token.issuer, idp-metadata.client
   controllers/ presenters/ views/
   service-provider.module.ts
 
@@ -63,7 +63,7 @@ Where a file goes is decided by *what makes it change*: business rule → `model
 
 Rules that hold across the codebase:
 
-- **Ports are abstract classes**, not interfaces — an interface does not exist at runtime and cannot be an injection token. `Clock`, `AssertionSigner`, `SamlGateway`, `SessionStore`. Use cases depend on the abstract class; only the module names an implementation (`{ provide: AssertionSigner, useClass: XmlCryptoAssertionSigner }`). Values with no class to hang off (config objects, metadata strings) use symbol tokens.
+- **Ports are abstract classes**, not interfaces — an interface does not exist at runtime and cannot be an injection token. `Clock`, `AssertionSigner`, `SamlGateway`, `AccessTokenIssuer`. Use cases depend on the abstract class; only the module names an implementation (`{ provide: AssertionSigner, useClass: XmlCryptoAssertionSigner }`). Values with no class to hang off (config objects, metadata strings) use symbol tokens.
 - **Each `*.module.ts` is the only place a port is bound to an implementation.** A spec swaps in a fake by binding the same token in `Test.createTestingModule`.
 - `models/` and the use cases in `services/` import no `@nestjs/platform-express`, no `xml-crypto`, no `@node-saml/node-saml`. Those appear only in the adapter files under `services/`, in `controllers/`, and in the module files.
 - No HTML or CSS in TypeScript. Markup lives in each application's `views/*.ejs`; `@Render("template")` names the view and the handler returns the model; a presenter builds that model. Escaping is EJS's `<%= %>` — don't hand-roll it. Every page opens with `include("_head", { title })` and closes with `include("_foot")`.
@@ -76,6 +76,9 @@ Two boundaries that carry security meaning, not just structure:
 
 - `identity-provider/models/service-provider-registry.ts` decides the ACS URL from the IdP's own registry, never from the AuthnRequest. Trusting the request's `AssertionConsumerServiceURL` would let an attacker redirect a valid assertion.
 - `toSafeLandingPage()` in `service-provider/services/complete-single-sign-on.use-case.ts` restricts RelayState to local paths.
+- `JwtModule.register` pins the algorithm on **both** `signOptions` and `verifyOptions`. Dropping `verifyOptions.algorithms` reopens JWT algorithm confusion.
+
+Sign-in state lives entirely in the browser: the SP signs its own JWT after the assertion validates, hands it over through `views/store-token.ejs` (the IdP POSTs from its own origin, so only a script on the SP origin can write to the SP's localStorage), and `BearerTokenGuard` verifies it on `/api/me`. There is no session store — `@Post("api/saml/acs")` needs `@HttpCode(200)` because Nest would otherwise answer 201 for a rendered page.
 
 `tampering.simulator.ts` is demo-only, representing a man-in-the-middle between IdP and SP. It is deliberately not IdP business logic.
 
