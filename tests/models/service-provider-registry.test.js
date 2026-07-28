@@ -6,7 +6,7 @@ const assert = require("node:assert/strict");
 const {
     createServiceProviderRegistry,
     UnregisteredServiceProviderError,
-} = require("../../../src/features/identity-provider/service-provider-registry");
+} = require("../../src/models/service-provider-registry");
 
 const JSL_ONLINE = Object.freeze({
     entityId: "https://jsl-online.example.test/metadata",

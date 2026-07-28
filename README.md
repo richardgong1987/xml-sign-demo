@@ -110,25 +110,36 @@ NotOnOrAfter，最后返回用户 Profile。
 ## 目录结构
 
 ```text
-docs/design/saml-sso-http.md    设计文档：边界、依赖方向、测试策略
-src/config.js                   由端口推导出两端的 Entity ID、地址、有效期
-src/bootstrap.js                组装根：先起 IdP，再让 SP 导入 metadata
-src/server.js                   命令行入口，打印启动信息
-src/features/identity-provider/ IdP：用户目录、SP 注册表、Assertion 签名
-              └── views/        EJS 模板：登录页、自动提交表单
-src/features/service-provider/  SP：SSO 发起、SAMLResponse 校验、会话
-              └── views/        EJS 模板：首页、已登录页
-src/shared/views/               公共 layout：_head.ejs、_foot.ejs
-src/shared/public/demo.css      两个服务共用的样式表
-tests/features/                 domain 与 use case 单元测试
-tests/e2e/                      端到端测试
-demo.js                         离线版
+docs/design/saml-sso-http.md   设计文档：边界、依赖方向、测试策略
+src/config.js                  由端口推导出两端的 Entity ID、地址、有效期
+src/bootstrap.js               组装根：装配两个 app，先起 IdP 再让 SP 导入 metadata
+src/server.js                  命令行入口，打印启动信息
+src/models/                    业务规则：用户目录、SP 注册表、SAMLResponse 构造
+src/services/                  用例与外部依赖：签名、node-saml、会话、metadata 抓取
+src/controllers/               HTTP 边界：idp.controller、sp.controller
+src/presenters/                决定用哪个模板、模板需要什么数据
+src/views/                     EJS 模板，含公共 layout _head.ejs / _foot.ejs
+src/public/demo.css            两个服务共用的样式表
+src/utils/                     时钟、SAML ID、证书、模板引擎等通用工具
+tests/models/  tests/services/ 单元测试
+tests/e2e/                     端到端测试
+demo.js                        离线版
 ```
 
-HTML 全部在 `views/*.ejs` 里，presenter 只负责挑模板和准备数据（`{ view, model }`），
-controller 通过 `shared/render-view.js` 渲染，因此业务代码里没有 HTML 字符串。
+一份文件属于哪一层，看它「因为什么原因才需要改」：
+
+| 目录 | 改动原因 |
+| --- | --- |
+| `models/` | 业务规则变了 |
+| `services/` | 流程变了，或换了外部库、存储 |
+| `controllers/` | 接口协议变了 |
+| `presenters/` `views/` | 页面展示变了 |
+| `utils/` | 通用技术细节变了 |
+
+HTML 全部在 `src/views/*.ejs` 里，presenter 只负责挑模板和准备数据（`{ view, model }`），
+controller 通过 `utils/render-view.js` 渲染，因此业务代码里没有 HTML 字符串。
 每个页面以 `include("_head", { title })` 开头、`include("_foot")` 结尾，
-公共 layout 放在 `src/shared/views/`，两个服务共用。
+IdP 与 SP 共用同一份模板目录和样式表。
 
 ## 生产环境的差异
 

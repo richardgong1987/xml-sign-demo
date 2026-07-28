@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test \"tests/**/*.test.js\"",
-    "test:unit": "node --test \"tests/features/**/*.test.js\"",
+    "test:unit": "node --test \"tests/models/*.test.js\" \"tests/services/*.test.js\"",
     "test:e2e": "node --test \"tests/e2e/*.test.js\"",
     "demo": "node demo.js"
   },

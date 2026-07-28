@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 
 const {
     CompleteSingleSignOnUseCase,
-} = require("../../../src/features/service-provider/complete-single-sign-on.use-case");
+} = require("../../src/services/complete-single-sign-on");
 
 const AUTHENTICATED_USER = Object.freeze({ nameId: "hanjin", role: "trader" });
 

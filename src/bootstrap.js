@@ -1,10 +1,28 @@
 "use strict";
 
+const express = require("express");
+const cookieParser = require("cookie-parser");
+
 const { createSamlConfigs } = require("./config");
-const { createDemoSigningCredential } = require("./shared/demo-signing-credential");
-const { createIdentityProviderApp } = require("./features/identity-provider");
-const { createServiceProviderApp } = require("./features/service-provider");
-const { fetchIdentityProviderMetadata } = require("./features/service-provider/idp-metadata.client");
+
+const { createServiceProviderRegistry } = require("./models/service-provider-registry");
+const { createIdentityProviderMetadata } = require("./models/idp-metadata.factory");
+
+const { IssueSamlResponseUseCase } = require("./services/issue-saml-response");
+const { StartSingleSignOnUseCase } = require("./services/start-single-sign-on");
+const { CompleteSingleSignOnUseCase } = require("./services/complete-single-sign-on");
+const { createXmlCryptoAssertionSigner } = require("./services/xml-crypto-assertion-signer");
+const { createNodeSamlGateway } = require("./services/node-saml.gateway");
+const { createInMemorySessionStore } = require("./services/in-memory-session-store");
+const { fetchIdentityProviderMetadata } = require("./services/idp-metadata.client");
+
+const { createIdentityProviderRouter } = require("./controllers/idp.controller");
+const { createServiceProviderRouter } = require("./controllers/sp.controller");
+
+const { createDemoSigningCredential } = require("./utils/demo-signing-credential");
+const { createHttpErrorHandler } = require("./utils/http-error-handler");
+const { useEjsViews } = require("./utils/view-engine");
+const { systemClock } = require("./utils/system-clock");
 
 /**
  * 组装根：启动 IdP 与 SP。
@@ -43,6 +61,60 @@ async function startSamlDemo(ports) {
             await Promise.all([close(serviceProviderServer), close(identityProviderServer)]);
         },
     };
+}
+
+/*
+ * 下面两个函数是唯一把 service 换成具体实现的地方。
+ * 想把内存会话换成 Redis、把 xml-crypto 换成别的签名库，只改这里。
+ */
+
+function createIdentityProviderApp({ config, signingCredential }) {
+    const issueSamlResponse = new IssueSamlResponseUseCase({
+        identityProvider: config,
+        serviceProviderRegistry: createServiceProviderRegistry(config.registeredServiceProviders),
+        assertionSigner: createXmlCryptoAssertionSigner(signingCredential.privateKeyPem),
+        clock: systemClock,
+    });
+
+    const app = express();
+
+    useEjsViews(app);
+    app.use(express.urlencoded({ extended: false }));
+    app.use(
+        createIdentityProviderRouter({
+            issueSamlResponse,
+            metadataXml: createIdentityProviderMetadata({
+                entityId: config.entityId,
+                singleSignOnUrl: config.singleSignOnUrl,
+                certificatePem: signingCredential.certificatePem,
+            }),
+        }),
+    );
+    app.use(createHttpErrorHandler("IdP"));
+
+    return app;
+}
+
+function createServiceProviderApp({ config, identityProvider }) {
+    const samlGateway = createNodeSamlGateway({ serviceProvider: config, identityProvider });
+    const sessionStore = createInMemorySessionStore();
+
+    const app = express();
+
+    useEjsViews(app);
+    app.use(express.urlencoded({ extended: false }));
+    app.use(cookieParser());
+    app.use(
+        createServiceProviderRouter({
+            startSingleSignOn: new StartSingleSignOnUseCase({ samlGateway }),
+            completeSingleSignOn: new CompleteSingleSignOnUseCase({ samlGateway, sessionStore }),
+            sessionStore,
+            metadataXml: samlGateway.describeMetadata(),
+        }),
+    );
+    app.use(createHttpErrorHandler("SP"));
+
+    return app;
 }
 
 function listen(app, port) {

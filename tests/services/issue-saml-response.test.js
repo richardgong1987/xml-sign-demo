@@ -5,12 +5,12 @@ const assert = require("node:assert/strict");
 
 const {
     IssueSamlResponseUseCase,
-} = require("../../../src/features/identity-provider/issue-saml-response.use-case");
+} = require("../../src/services/issue-saml-response");
 const {
     createServiceProviderRegistry,
     UnregisteredServiceProviderError,
-} = require("../../../src/features/identity-provider/service-provider-registry");
-const { UnknownUserError } = require("../../../src/features/identity-provider/user-directory");
+} = require("../../src/models/service-provider-registry");
+const { UnknownUserError } = require("../../src/models/user-directory");
 
 const IDENTITY_PROVIDER = Object.freeze({
     entityId: "https://openam.example.test/idp",

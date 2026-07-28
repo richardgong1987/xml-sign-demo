@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 
 const {
     StartSingleSignOnUseCase,
-} = require("../../../src/features/service-provider/start-single-sign-on.use-case");
+} = require("../../src/services/start-single-sign-on");
 
 /*
  * 假的 SamlGatewayPort：记录 RelayState，不生成真正的 AuthnRequest。

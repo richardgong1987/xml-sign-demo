@@ -6,7 +6,7 @@ const assert = require("node:assert/strict");
 const {
     createAuthenticatedUser,
     InvalidAuthenticatedUserError,
-} = require("../../../src/features/service-provider/authenticated-user");
+} = require("../../src/models/authenticated-user");
 
 const VALID_PROFILE = Object.freeze({
     nameId: "hanjin",

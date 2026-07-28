@@ -7,7 +7,7 @@ const {
     listUsers,
     findUser,
     UnknownUserError,
-} = require("../../../src/features/identity-provider/user-directory");
+} = require("../../src/models/user-directory");
 
 test("列出所有可登录的演示用户", () => {
     const uids = listUsers().map((user) => user.uid);

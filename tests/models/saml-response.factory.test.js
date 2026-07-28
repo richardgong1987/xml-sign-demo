@@ -7,7 +7,7 @@ const xpath = require("xpath");
 
 const {
     createUnsignedSamlResponse,
-} = require("../../../src/features/identity-provider/saml-response.factory");
+} = require("../../src/models/saml-response.factory");
 
 const ISSUED_AT = new Date("2026-07-28T09:00:00.000Z");
 
