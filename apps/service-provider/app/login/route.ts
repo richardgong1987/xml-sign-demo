@@ -13,6 +13,6 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request): Promise<NextResponse> {
     const {startSingleSignOn} = await getServiceProvider();
     const returnTo = new URL(request.url).searchParams.get("returnTo") ?? "";
-
-    return NextResponse.redirect(await startSingleSignOn.execute({returnTo}), 302);
+    const url = await startSingleSignOn.execute({returnTo});
+    return NextResponse.redirect(url, 302);
 }
