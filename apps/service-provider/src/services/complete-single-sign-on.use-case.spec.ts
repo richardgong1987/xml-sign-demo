@@ -9,7 +9,6 @@ const AUTHENTICATED_USER: AuthenticatedUser = {
     uid: "xh-gong",
     email: "xh-demo@example.com.jp",
     role: "developer",
-    sessionIndex: "_session-1",
 };
 
 const config: ServiceProviderConfig = readServiceProviderConfig({

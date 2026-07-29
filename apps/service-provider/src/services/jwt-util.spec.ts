@@ -7,7 +7,6 @@ const USER: AuthenticatedUser = {
     uid: "xh-gong",
     email: "xh-demo@example.com.jp",
     role: "developer",
-    sessionIndex: "_session-1",
 };
 
 function configWithSecret(secret: string): ServiceProviderConfig {

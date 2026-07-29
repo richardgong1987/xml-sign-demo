@@ -10,7 +10,6 @@ export interface AuthenticatedUser {
     readonly uid: string;
     readonly email: string;
     readonly role: string;
-    readonly sessionIndex: string;
 }
 
 /**

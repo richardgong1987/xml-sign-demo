@@ -62,7 +62,7 @@ export function createUnsignedSamlResponse(spec: UnsignedSamlResponseSpec): stri
       </saml:AudienceRestriction>
     </saml:Conditions>
 
-    <saml:AuthnStatement AuthnInstant="${issueInstant}" SessionIndex="${createSamlId()}">
+    <saml:AuthnStatement AuthnInstant="${issueInstant}">
       <saml:AuthnContext>
         <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
       </saml:AuthnContext>

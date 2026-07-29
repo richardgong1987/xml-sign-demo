@@ -72,6 +72,5 @@ function toAuthenticatedUser(profile: Record<string, unknown> | null | undefined
         uid: String(profile?.uid ?? ""),
         email: String(profile?.email ?? ""),
         role: String(profile?.role ?? ""),
-        sessionIndex: String(profile?.sessionIndex ?? ""),
     });
 }

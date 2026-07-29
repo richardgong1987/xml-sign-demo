@@ -23,7 +23,6 @@ export class JwtUtil {
             uid: user.uid,
             email: user.email,
             role: user.role,
-            sessionIndex: user.sessionIndex,
         })
             .setProtectedHeader({alg: ALGORITHM})
             .setSubject(user.nameId)
@@ -47,7 +46,6 @@ export class JwtUtil {
             uid: String(payload.uid ?? ""),
             email: String(payload.email ?? ""),
             role: String(payload.role ?? ""),
-            sessionIndex: String(payload.sessionIndex ?? ""),
         });
     }
 }

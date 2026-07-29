@@ -5,7 +5,6 @@ const VALID_PROFILE: AuthenticatedUser = {
     uid: "hanjin",
     email: "hanjin@example.test",
     role: "trader",
-    sessionIndex: "_session-1",
 };
 
 describe("createAuthenticatedUser", () => {

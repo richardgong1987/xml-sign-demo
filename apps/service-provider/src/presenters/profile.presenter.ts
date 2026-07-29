@@ -19,7 +19,6 @@ const PROFILE_FIELDS: readonly { key: keyof AuthenticatedUser; label: string }[]
     {key: "uid", label: "uid"},
     {key: "email", label: "email"},
     {key: "role", label: "role"},
-    {key: "sessionIndex", label: "SessionIndex"},
 ]);
 
 export function toProfileResponse(user: AuthenticatedUser): ProfileResponse {

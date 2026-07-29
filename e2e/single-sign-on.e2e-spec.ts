@@ -76,13 +76,7 @@ describe("single sign-on", () => {
         const profile = (await response.json()) as {fields: {label: string; value: string}[]};
 
         expect(response.status).toBe(200);
-        expect(profile.fields.map((field) => field.label)).toEqual([
-            "NameID",
-            "uid",
-            "email",
-            "role",
-            "SessionIndex",
-        ]);
+        expect(profile.fields.map((field) => field.label)).toEqual(["NameID", "uid", "email", "role"]);
         expect(profile.fields.find((field) => field.label === "uid")?.value).toBeTruthy();
     });
 
